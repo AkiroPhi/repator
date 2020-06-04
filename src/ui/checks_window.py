@@ -147,7 +147,7 @@ class GitButton(QPushButton):
             show_all_button = dialog.layout().itemAt(2).widget()
             if ((show_all_button.text() == "Show visible") or
                     (dialog.layout().itemAt(2).widget().text() == "Show all"
-                     and self.visible[value])):
+                     and value in self.get_visible_values())):
                 self.temp_checked[value] = selection
         layout = dialog.layout().itemAt(3).widget().widget().layout()
         for i in range(layout.count() - 1):
