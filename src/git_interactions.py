@@ -1,5 +1,8 @@
 """Defines Git class, a helper to use Git."""
 # coding=utf-8
+from shutil import rmtree
+from git import Repo, GitCommandError
+from os import mkdir
 
 from subprocess import Popen, PIPE
 from re import findall
@@ -19,13 +22,17 @@ class Git(QObject):
         super().__init__()
         self.dismiss_changes = False
         self.git_reachable = False
-        self.init_git()
+        # ajout perso
+        self.repo = None
+        # the end
+        # self.init_git()
         self.app = QCoreApplication.instance()
         self.setParent(self.app)
         self.background_thread = Thread(
             target=self.timer_vulnerabilities, daemon=True)
         self.background_update = Thread(
             target=self.git_update, daemon=True)
+        self.git_routine()
 
     @staticmethod
     def execute_command(arg, cwd="."):
@@ -42,20 +49,13 @@ class Git(QObject):
 
     def init_git(self):
         """Initialises the git repository in a new directory."""
-        arg = "rm -rf .tmpGit"
-        Git.execute_command(arg)
-        arg = "mkdir .tmpGit"
-        Git.execute_command(arg)
-        args = []
-        try:
-            args.append("git init")
-            args.append("git config core.sshCommand \"ssh -i " +
-                        SSH_KEY + " -F /dev/null\"")
-            args.append("git remote add origin " + GIT)
-            for arg in args:
-                self.execute_command(arg, "./.tmpGit")
-        except RuntimeError as err:
-            print(err)
+        gitDir = '.tmpGit'
+        rmtree(gitDir) # reset gitrepo
+        self.repo = Repo.init(gitDir) # init the repo
+        ssh_cmd = "ssh -i " + SSH_KEY + " -F /dev/null"
+        # self.repo.config_writer('core.sshCommand ' + ssh_cmd)
+        self.repo.git.custom_environment(GIT_SSH_COMMAND=ssh_cmd) # set the config ?
+        self.repo.create_remote('origin',url=GIT)
 
     def clean_git(self):
         """Removes the git file (the thread doesn't need to be killed since it is deamonized)."""
@@ -73,32 +73,43 @@ class Git(QObject):
 
     def git_update(self):
         """Pulls git repo and colors View changes button if the repository is unreachable."""
-        arg = "git pull origin master"
+        print("Communication with Git...")
+        repator, diffs = None, None
         for window in self.app.topLevelWidgets():
             if window.windowTitle() == "Repator":
                 repator = window
             elif window.windowTitle() == "Diffs":
                 diffs = window
         try:
-            process = Popen(arg, shell=True, cwd="./.tmpGit",
-                            stdout=PIPE, stderr=PIPE)
-            res = process.communicate()
-            for line in res:
-                if line:
-                    result = line.decode('utf-8')
-                    err = findall("[eE][rR][rR][oO][rR]", result)
-                    fat = findall("fatal", result)
-                    if err:
-                        raise RuntimeError(result)
-                    if fat:
-                        raise RuntimeError(result)
+            self.repo.remote().pull('master')
             self.git_reachable = True
-        except RuntimeError:
+
+        except GitCommandError as err:
+            print(err)
             self.git_reachable = False
+
+        git_connection = repator.layout().itemAt(5).widget()
+        if self.git_reachable:
+            git_connection.setStyleSheet("QPushButton { background-color : green }")
+            # view_change button
+            repator.layout().itemAt(3).widget().setStyleSheet(
+                "QPushButton { background-color : white }")
+            # Refresh button
+            if diffs:
+                diffs.layout().itemAt(0).widget().widget(0).widget.layout().itemAt(
+                3).widget().setStyleSheet("QPushButton { background-color : white }")
+
+        else:
+            git_connection.setStyleSheet("QPushButton { background-color : red }")
+            # view_change button
             repator.layout().itemAt(3).widget().setStyleSheet(
                 "QPushButton { background-color : grey }")
-            diffs.layout().itemAt(0).widget().widget(0).widget.layout().itemAt(
+            # Refresh button
+            if diffs:
+                diffs.layout().itemAt(0).widget().widget(0).widget.layout().itemAt(
                 3).widget().setStyleSheet("QPushButton { background-color : grey }")
+
+
 
     @staticmethod
     def git_changed():
@@ -130,18 +141,21 @@ class Git(QObject):
     @staticmethod
     def update_changes_button_colors(repator, diffs):
         """Updates View changes and refresh colors"""
-        if not repator.dismiss_changes and Git.vulnerabilities_changed():
+        # print(repator, diffs)
+
+        view_change_button = repator.layout().itemAt(3).widget()
+        if not False and Git.vulnerabilities_changed():
             if diffs and diffs.isVisible():
+                refresh_button = diffs.layout().itemAt(0).widget().widget(0
+                ).widget.layout().itemAt(3).widget()
                 if Git.git_changed():
-                    diffs.layout().itemAt(0).widget().widget(0).widget.layout().itemAt(
-                        3).widget().setStyleSheet("QPushButton { background-color : red }")
+                    refresh_button.setStyleSheet("QPushButton { background-color : red }")
                 else:
-                    diffs.layout().itemAt(0).widget().widget(0).widget.layout().itemAt(
-                        3).widget().setStyleSheet("QPushButton { background-color : light gray }")
-            repator.layout().itemAt(3).widget().setStyleSheet(
+                    refresh_button.setStyleSheet("QPushButton { background-color : light gray }")
+            view_change_button.setStyleSheet(
                 "QPushButton { background-color : red }")
         else:
-            repator.layout().itemAt(3).widget().setStyleSheet(
+            view_change_button.setStyleSheet(
                 "QPushButton { background-color : light gray }")
 
     def refresh(self):
@@ -158,4 +172,5 @@ class Git(QObject):
     def git_routine(self):
         """Sets up the git subprocess"""
         self.init_git()
+        print("Git initialise, Lancement de la Maj du repo")
         self.background_thread.start()

@@ -49,15 +49,19 @@ class Window(QWidget):
         generate_btn = QPushButton("Generate", self)
         generate_btn.clicked.connect(self.generate)
 
+        git_text = QPushButton("Git connection", self)
+
         self.grid = QGridLayout()
         self.grid.setSpacing(5)
         self.grid.setContentsMargins(5, 5, 5, 5)
 
-        self.grid.addWidget(tabw, 0, 0, 1, 4)
+        self.grid.addWidget(tabw, 0, 0, 1, 5)
         self.grid.addWidget(save_btn, 1, 0)
         self.grid.addWidget(load_btn, 1, 1)
         self.grid.addWidget(view_changes_btn, 1, 2)
         self.grid.addWidget(generate_btn, 1, 3)
+        self.grid.addWidget(git_text, 1, 4)
+
 
         self.setLayout(self.grid)
 
