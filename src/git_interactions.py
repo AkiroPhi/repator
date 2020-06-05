@@ -11,7 +11,7 @@ import time
 from threading import Thread
 from shutil import copyfile
 from PyQt5.QtCore import QCoreApplication, QObject
-from conf.db import DB_VULNS_GIT, DB_VULNS_INITIAL, DB_VULNS_GIT_UPDATED
+from conf.db import DB_VULNS, DB_VULNS_GIT, DB_VULNS_GIT_UPDATED
 from conf.report import SSH_KEY, GIT, REFRESH_RATE
 
 
@@ -24,6 +24,7 @@ class Git(QObject):
         self.git_reachable = False
         # ajout perso
         self.repo = None
+        self.gitDir = '.tmpGit'
         # the end
         # self.init_git()
         self.app = QCoreApplication.instance()
@@ -34,24 +35,23 @@ class Git(QObject):
             target=self.git_update, daemon=True)
         self.git_routine()
 
-    @staticmethod
-    def execute_command(arg, cwd="."):
-        """Executes the command arg in a subprocess with the option of setting the cwd."""
-        process = Popen(arg, shell=True, cwd=cwd, stdout=PIPE, stderr=PIPE)
-        res = process.communicate()
-        for line in res:
-            if line:
-                result = line.decode('utf-8')
-                err = findall("[eE][rR][rR][oO][rR]", result)
-                fat = findall("fatal", result)
-                if err or fat:
-                    raise RuntimeError(result)
+    # @staticmethod
+    # def execute_command(arg, cwd="."):
+    #     """Executes the command arg in a subprocess with the option of setting the cwd."""
+    #     process = Popen(arg, shell=True, cwd=cwd, stdout=PIPE, stderr=PIPE)
+    #     res = process.communicate()
+    #     for line in res:
+    #         if line:
+    #             result = line.decode('utf-8')
+    #             err = findall("[eE][rR][rR][oO][rR]", result)
+    #             fat = findall("fatal", result)
+    #             if err or fat:
+    #                 raise RuntimeError(result)
 
     def init_git(self):
         """Initialises the git repository in a new directory."""
-        gitDir = '.tmpGit'
-        rmtree(gitDir) # reset gitrepo
-        self.repo = Repo.init(gitDir) # init the repo
+        self.clean_git()
+        self.repo = Repo.init(self.gitDir)
         ssh_cmd = "ssh -i " + SSH_KEY + " -F /dev/null"
         # self.repo.config_writer('core.sshCommand ' + ssh_cmd)
         self.repo.git.custom_environment(GIT_SSH_COMMAND=ssh_cmd) # set the config ?
@@ -59,17 +59,16 @@ class Git(QObject):
 
     def clean_git(self):
         """Removes the git file (the thread doesn't need to be killed since it is deamonized)."""
-        args = "rm -rf .tmpGit"
-        self.execute_command(args)
+        rmtree(self.gitDir)
 
     @staticmethod
     def vulnerabilities_changed():
-        """Compares DB_VULNS_INITIAL and DB_VULNS_GIT"""
-        json_db_initial = json.loads(
-            open(DB_VULNS_INITIAL, 'r').read())["_default"]
+        """Compares DB_VULNS and DB_VULNS_GIT"""
+        json_db = json.loads(
+            open(DB_VULNS, 'r').read())["_default"]
         json_db_updated = json.loads(
             open(DB_VULNS_GIT, 'r').read())["_default"]
-        return not json_db_updated == json_db_initial
+        return not json_db_updated == json_db
 
     def git_update(self):
         """Pulls git repo and colors View changes button if the repository is unreachable."""
@@ -88,27 +87,7 @@ class Git(QObject):
             print(err)
             self.git_reachable = False
 
-        git_connection = repator.layout().itemAt(5).widget()
-        if self.git_reachable:
-            git_connection.setStyleSheet("QPushButton { background-color : green }")
-            # view_change button
-            repator.layout().itemAt(3).widget().setStyleSheet(
-                "QPushButton { background-color : white }")
-            # Refresh button
-            if diffs:
-                diffs.layout().itemAt(0).widget().widget(0).widget.layout().itemAt(
-                3).widget().setStyleSheet("QPushButton { background-color : white }")
-
-        else:
-            git_connection.setStyleSheet("QPushButton { background-color : red }")
-            # view_change button
-            repator.layout().itemAt(3).widget().setStyleSheet(
-                "QPushButton { background-color : grey }")
-            # Refresh button
-            if diffs:
-                diffs.layout().itemAt(0).widget().widget(0).widget.layout().itemAt(
-                3).widget().setStyleSheet("QPushButton { background-color : grey }")
-
+        self.update_changes_button_colors(repator, diffs)
 
 
     @staticmethod
@@ -135,28 +114,33 @@ class Git(QObject):
                 elif window.windowTitle() == "Diffs":
                     diffs = window
             if self.git_reachable:
-                Git.update_changes_button_colors(repator, diffs)
+                self.update_changes_button_colors(repator, diffs)
             time.sleep(REFRESH_RATE)
 
-    @staticmethod
-    def update_changes_button_colors(repator, diffs):
+    def update_changes_button_colors(self, repator, diffs):
         """Updates View changes and refresh colors"""
-        # print(repator, diffs)
-
         view_change_button = repator.layout().itemAt(3).widget()
+        ## repator.dismiss_changes ## (False)
         if not False and Git.vulnerabilities_changed():
-            if diffs and diffs.isVisible():
+            view_change_button.setStyleSheet(
+                "QPushButton { background-color : orange }")
+        else:
+            view_change_button.setStyleSheet(
+                "QPushButton { background-color : light gray }")
+
+        if diffs and diffs.isVisible():
                 refresh_button = diffs.layout().itemAt(0).widget().widget(0
                 ).widget.layout().itemAt(3).widget()
                 if Git.git_changed():
                     refresh_button.setStyleSheet("QPushButton { background-color : red }")
                 else:
                     refresh_button.setStyleSheet("QPushButton { background-color : light gray }")
-            view_change_button.setStyleSheet(
-                "QPushButton { background-color : red }")
+
+        git_connection = repator.layout().itemAt(5).widget()
+        if self.git_reachable:
+            git_connection.setStyleSheet("QLabel { background-color : green }")
         else:
-            view_change_button.setStyleSheet(
-                "QPushButton { background-color : light gray }")
+            git_connection.setStyleSheet("QLabel { background-color : red }")
 
     def refresh(self):
         """Updates git file and refreshes "Diffs" window"""
