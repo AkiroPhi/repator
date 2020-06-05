@@ -4,8 +4,8 @@
 
 from copy import copy
 
-from PyQt5.QtWidgets import QWidget, QTabWidget, QPushButton, QGridLayout, QFileDialog
-from PyQt5.QtCore import QCoreApplication
+from PyQt5.QtWidgets import QWidget, QTabWidget, QPushButton, QGridLayout, QFileDialog, QLabel
+from PyQt5.QtCore import QCoreApplication, Qt
 
 from conf.ui_vulns_initial import VULNS_INITIAL, add_vuln_initial
 from src.dbhandler import DBHandler
@@ -48,8 +48,8 @@ class Window(QWidget):
         view_changes_btn.clicked.connect(self.view_changes)
         generate_btn = QPushButton("Generate", self)
         generate_btn.clicked.connect(self.generate)
-
-        git_text = QPushButton("Git connection", self)
+        git_text = QLabel("Git connection", self)
+        git_text.setAlignment(Qt.AlignCenter)
 
         self.grid = QGridLayout()
         self.grid.setSpacing(5)
