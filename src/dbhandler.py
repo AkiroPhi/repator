@@ -9,7 +9,7 @@ from tinydb import TinyDB, Query
 
 from conf.db import (DB_AUDITORS, DB_AUDITORS_DEFAULT, DB_CLIENTS,
                      DB_CLIENTS_DEFAULT, DB_VULNS, DB_VULNS_DEFAULT,
-                     DB_VULNS_GIT, DB_VULNS_INITIAL)
+                     DB_VULNS_GIT)
 
 
 class DBHandler:
@@ -33,11 +33,6 @@ class DBHandler:
     def vulns_git():
         """Default constructor for Vulns taken from git database."""
         return DBHandler(DB_VULNS_GIT, DB_VULNS_DEFAULT)
-
-    @staticmethod
-    def vulns_initial():
-        """Default constructor for vulns database when repator has been launched."""
-        return DBHandler(DB_VULNS_INITIAL, DB_VULNS_DEFAULT)
 
     def __init__(self, db_path, default_values=None):
         if not path.exists(path.dirname(db_path)):

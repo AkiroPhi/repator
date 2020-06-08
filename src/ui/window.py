@@ -115,7 +115,7 @@ class Window(QWidget):
         """Opens the window "Diffs"."""
         # NB: the windows "Diffs" will close when editing in "Repator" if
         # nothing has been opened in it.
-        tab_lst = copy(VULNS_INITIAL), DBHandler.vulns_initial(
+        tab_lst = copy(VULNS_INITIAL), DBHandler.vulns(
         ), DBHandler.vulns_git(), add_vuln_initial
         for window in self.app.topLevelWidgets():
             if window.windowTitle() == "Diffs" and window.isVisible():
