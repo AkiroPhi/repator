@@ -40,7 +40,7 @@ class VulnsGit(QWidget):
         self.add_fct = args[3]
         self.hide = False
         self.buttons = dict()
-        self.hidden_vulns = set()
+        self.hidden_vulns = self.git.hidden_changes_vulns # using reference
         self.json_db_git = dict()
         self.json_db = dict()
 
@@ -193,7 +193,8 @@ class VulnsGit(QWidget):
 
     def hide_changes(self, checked):
         """Allows to choose which vulnerabilities are not followed."""
-        self.hidden_vulns = checked
+        self.hidden_vulns.clear()
+        self.hidden_vulns.update(checked)
         self.refresh_tab_widget()
 
     def patch_changes(self, checked):

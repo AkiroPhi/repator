@@ -20,15 +20,12 @@ class Git(QObject):
 
     def __init__(self):
         super().__init__()
-        self.dismiss_changes = False
         self.git_reachable = False
-        # ajout perso
         self.repo = None
         self.gitDir = '.tmpGit'
-        # the end
-        # self.init_git()
         self.app = QCoreApplication.instance()
         self.setParent(self.app)
+        self.hidden_changes_vulns = set()
         self.background_thread = Thread(
             target=self.timer_vulnerabilities, daemon=True)
         self.background_update = Thread(
@@ -61,8 +58,7 @@ class Git(QObject):
         """Removes the git file (the thread doesn't need to be killed since it is deamonized)."""
         rmtree(self.gitDir)
 
-    @staticmethod
-    def vulnerabilities_changed():
+    def vulnerabilities_changed(self):
         """
         Compares DB_VULNS and DB_VULNS_GIT
         """
@@ -70,9 +66,11 @@ class Git(QObject):
             open(DB_VULNS, 'r').read())["_default"]
         json_db_git = json.loads(
             open(DB_VULNS_GIT, 'r').read())["_default"]
-        print("json : ", json_db)
-        print("json git: ", json_db_git)
-        return not json_db_git == json_db
+        list_id = set(json_db.keys()).union(set((json_db_git.keys())))
+        for ident in list_id:
+             if ident not in self.hidden_changes_vulns and (ident not in json_db or ident not in json_db_git or  json_db_git[ident] != json_db_git[ident]):
+                return True
+        return False
 
     def git_update(self):
         """Pulls git repo and colors View changes button if the repository is unreachable."""
@@ -117,8 +115,7 @@ class Git(QObject):
     def update_changes_button_colors(self, repator, diffs):
         """Updates View changes and refresh colors"""
         view_change_button = repator.layout().itemAt(3).widget()
-        ## repator.dismiss_changes ## (False)
-        if not False and Git.vulnerabilities_changed(): # if the vulnerabilities  aren't hidden
+        if self.vulnerabilities_changed(): # if the vulnerabilities  aren't hidden
             view_change_button.setStyleSheet(
                 "QPushButton { background-color : orange }")
         else:
