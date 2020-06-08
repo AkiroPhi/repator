@@ -63,12 +63,16 @@ class Git(QObject):
 
     @staticmethod
     def vulnerabilities_changed():
-        """Compares DB_VULNS and DB_VULNS_GIT"""
+        """
+        Compares DB_VULNS and DB_VULNS_GIT
+        """
         json_db = json.loads(
             open(DB_VULNS, 'r').read())["_default"]
-        json_db_updated = json.loads(
+        json_db_git = json.loads(
             open(DB_VULNS_GIT, 'r').read())["_default"]
-        return not json_db_updated == json_db
+        print("json : ", json_db)
+        print("json git: ", json_db_git)
+        return not json_db_git == json_db
 
     def git_update(self):
         """Pulls git repo and colors View changes button if the repository is unreachable."""
@@ -108,20 +112,13 @@ class Git(QObject):
         diffs = None
         while True:
             self.git_update()
-            for window in self.app.topLevelWidgets():
-                if window.windowTitle() == "Repator":
-                    repator = window
-                elif window.windowTitle() == "Diffs":
-                    diffs = window
-            if self.git_reachable:
-                self.update_changes_button_colors(repator, diffs)
             time.sleep(REFRESH_RATE)
 
     def update_changes_button_colors(self, repator, diffs):
         """Updates View changes and refresh colors"""
         view_change_button = repator.layout().itemAt(3).widget()
         ## repator.dismiss_changes ## (False)
-        if not False and Git.vulnerabilities_changed():
+        if not False and Git.vulnerabilities_changed(): # if the vulnerabilities  aren't hidden
             view_change_button.setStyleSheet(
                 "QPushButton { background-color : orange }")
         else:
