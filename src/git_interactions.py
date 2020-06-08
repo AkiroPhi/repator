@@ -61,6 +61,7 @@ class Git(QObject):
     def vulnerabilities_changed(self):
         """
         Compares DB_VULNS and DB_VULNS_GIT
+        Return True if the vulnerabilities tracked changed
         """
         json_db = json.loads(
             open(DB_VULNS, 'r').read())["_default"]
@@ -68,7 +69,7 @@ class Git(QObject):
             open(DB_VULNS_GIT, 'r').read())["_default"]
         list_id = set(json_db.keys()).union(set((json_db_git.keys())))
         for ident in list_id:
-             if ident not in self.hidden_changes_vulns and (ident not in json_db or ident not in json_db_git or  json_db_git[ident] != json_db_git[ident]):
+            if ident not in self.hidden_changes_vulns and (ident not in json_db or ident not in json_db_git or  json_db_git[ident] != json_db[ident]):
                 return True
         return False
 
