@@ -180,9 +180,9 @@ class VulnsGit(QWidget):
                 json.dumps({int(x): self.json_db_git[x]
                             for x in self.json_db_git.keys()}, sort_keys=True) + "}"
             with open(DB_VULNS_GIT, 'w') as output:
-                output.write(jsondb)
+                # output.write(jsondb)
             with open(DB_VULNS, 'w') as output:
-                output.write(jsondb)
+                # output.write(jsondb)
         # To also update repator window
         for window in self.app.topLevelWidgets():
             if window.windowTitle() == "Repator":
@@ -207,8 +207,6 @@ class VulnsGit(QWidget):
             jsondb = "{\"_default\":" + \
                 json.dumps({int(x): self.json_db[x]
                             for x in self.json_db.keys()}, sort_keys=True) + "}"
-            with open(DB_VULNS, 'w') as output:
-                output.write(jsondb)
             with open(DB_VULNS, 'w') as output:
                 output.write(jsondb)
             # To also update repator window
