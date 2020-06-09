@@ -11,7 +11,7 @@ import time
 from threading import Thread
 from shutil import copyfile
 from PyQt5.QtCore import QCoreApplication, QObject
-from conf.db import DB_VULNS, DB_VULNS_GIT, DB_VULNS_GIT_UPDATED
+from conf.db import DB_VULNS, DB_VULNS_GIT, DB_VULNS_GIT_UPDATED, DB_VULNS_GIT_DIR, DB_VULNS_GIT_FILE
 from conf.report import SSH_KEY, GIT, REFRESH_RATE
 
 
@@ -22,7 +22,6 @@ class Git(QObject):
         super().__init__()
         self.git_reachable = False
         self.repo = None
-        self.gitDir = '.tmpGit'
         self.app = QCoreApplication.instance()
         self.setParent(self.app)
         self.hidden_changes_vulns = set()
@@ -48,25 +47,31 @@ class Git(QObject):
     def init_git(self):
         """Initialises the git repository in a new directory."""
         self.clean_git()
-        self.repo = Repo.init(self.gitDir)
+        self.repo = Repo.init(DB_VULNS_GIT_DIR)
         ssh_cmd = "ssh -i " + SSH_KEY + " -F /dev/null"
         # self.repo.config_writer('core.sshCommand ' + ssh_cmd)
         self.repo.git.custom_environment(GIT_SSH_COMMAND=ssh_cmd) # set the config ?
-        self.repo.create_remote('origin',url=GIT)
+        self.repo.create_remote('origin', url=GIT)
 
     def clean_git(self):
         """Removes the git file (the thread doesn't need to be killed since it is deamonized)."""
-        rmtree(self.gitDir)
+        try:
+            rmtree(DB_VULNS_GIT_DIR)
+        except FileNotFoundError:
+            pass
 
     def vulnerabilities_changed(self):
         """
         Compares DB_VULNS and DB_VULNS_GIT
         Return True if the vulnerabilities tracked changed
         """
-        json_db = json.loads(
-            open(DB_VULNS, 'r').read())["_default"]
-        json_db_git = json.loads(
-            open(DB_VULNS_GIT, 'r').read())["_default"]
+        try:
+            json_db = json.loads(
+                open(DB_VULNS, 'r').read())["_default"]
+            json_db_git = json.loads(
+                open(DB_VULNS_GIT, 'r').read())["_default"]
+        except FileNotFoundError:
+            return True
         list_id = set(json_db.keys()).union(set((json_db_git.keys())))
         for ident in list_id:
             if ident not in self.hidden_changes_vulns and (ident not in json_db or ident not in json_db_git or  json_db_git[ident] != json_db[ident]):
@@ -75,7 +80,6 @@ class Git(QObject):
 
     def git_update(self):
         """Pulls git repo and colors View changes button if the repository is unreachable."""
-        print("Communication with Git...")
         repator, diffs = None, None
         for window in self.app.topLevelWidgets():
             if window.windowTitle() == "Repator":
@@ -89,7 +93,6 @@ class Git(QObject):
         except GitCommandError as err:
             print(err)
             self.git_reachable = False
-
         self.update_changes_button_colors(repator, diffs)
 
 
@@ -151,5 +154,10 @@ class Git(QObject):
     def git_routine(self):
         """Sets up the git subprocess"""
         self.init_git()
-        print("Git initialise, Lancement de la Maj du repo")
         self.background_thread.start()
+
+    def git_upload(self):
+        self.repo.index.add(DB_VULNS_GIT_FILE)
+        self.repo.index.commit('Commit auto')
+        self.repo.remote().pull('master')
+        self.repo.remote().push('master')
