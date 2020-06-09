@@ -61,7 +61,7 @@ class GitButton(QPushButton):
 
         layout = QGridLayout(viewport)
         viewport.setLayout(layout)
-        self.draw_layout(layout, show_all=True)
+        #self.draw_layout(layout, show_all=True)
         dialog_layout = QGridLayout(dialog)
         dialog.setLayout(dialog_layout)
 
@@ -81,10 +81,6 @@ class GitButton(QPushButton):
         """Draws the layout with the list of values that are in the window."""
         values = sorted(self.get_values(), key=int) if show_all else sorted(
             self.get_visible_values(), key=int)
-        # For the upload, the comparison is made with the changes made locally.
-        if self.action == "upload":
-            values = sorted(self.get_repator_values(), key=int) if show_all else sorted(
-                self.get_visible_values(), key=int)
         row = 0
         for value in values:
             checkbox = QCheckBox(value)
@@ -113,7 +109,7 @@ class GitButton(QPushButton):
             res.add(key)
         return res
 
-    def get_repator_values(self):
+    def get_repator_values(self): # useless and not use
         """Gets all modified values from the repator window."""
         app = QCoreApplication.instance()
         for window in app.topLevelWidgets():
@@ -136,8 +132,8 @@ class GitButton(QPushButton):
                 checked.add(ident)
         if self.action == "patch":
             self.vulns_git.patch_changes(checked)
-        elif self.action == "dismiss":
-            self.vulns_git.dismiss_changes(checked)
+        elif self.action == "hide":
+            self.vulns_git.hide_changes(checked)
         elif self.action == "upload":
             self.vulns_git.upload_changes(checked)
 
