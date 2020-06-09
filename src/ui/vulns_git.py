@@ -15,7 +15,7 @@ from conf.ui_vuln_changes import vuln_changes
 from conf.ui_vulns_initial import VULNS_INITIAL
 from conf.ui_vulns import VULNS
 from conf.report import LANGUAGES, GREEN, RED, BLUE, DEFAULT, COLORS, HEADERS, CVSS, HISTORIES
-from conf.db import DB_VULNS_GIT, DB_VULNS
+from conf.db import DB_VULNS_GIT, DB_VULNS, DB_VULNS_GIT_UPDATED
 from src.cvss import cvssv3, risk_level
 from src.git_interactions import Git
 from src.ui.checks_window import GitButton
@@ -67,7 +67,7 @@ class VulnsGit(QWidget):
         tab_lst = OrderedDict()
         tab_lst["All"] = self.lst
 
-        self.diffs_local_git()
+        self.init_db_local_git()
         self.update_diffs()
 
         for label, lst in tab_lst.items():
@@ -136,7 +136,7 @@ class VulnsGit(QWidget):
         self.grid.addWidget(self.buttons["patchOneBtn"], 1, 2)
 
         # TODO: remove this as the corresponding features are added.
-        self.buttons["uploadBtn"].setEnabled(False)
+#         self.buttons["uploadBtn"].setEnabled(False)
 
         self.show_buttons_all_view()
 
@@ -172,7 +172,7 @@ class VulnsGit(QWidget):
         # => Need une fonction qui va vérifier la cohérence des bases de
         # données.
         for ident in checked:
-            if self.style[ident] == RED:
+            if self.style[ident] == GREEN: # if the style is green, it's mean that the vuln is present in the git db and not in the local db
                 del self.json_db_git[ident]
             else:
                 self.json_db_git[ident] = self.json_db[ident]
@@ -180,9 +180,11 @@ class VulnsGit(QWidget):
                 json.dumps({int(x): self.json_db_git[x]
                             for x in self.json_db_git.keys()}, sort_keys=True) + "}"
             with open(DB_VULNS_GIT, 'w') as output:
-                # output.write(jsondb)
-            with open(DB_VULNS, 'w') as output:
-                # output.write(jsondb)
+                output.write(jsondb)
+            with open(DB_VULNS_GIT_UPDATED, 'w') as output:
+                output.write(jsondb)
+
+            self.git.git_upload()
         # To also update repator window
         for window in self.app.topLevelWidgets():
             if window.windowTitle() == "Repator":
@@ -330,7 +332,7 @@ class VulnsGit(QWidget):
             if isinstance(widget, QLabel):
                 widget.setWordWrap(True)
 
-    def diffs_local_git(self):
+    def init_db_local_git(self):
         """Initializes self.json_db_git and self.json_db."""
         self.json_db = json.loads(
             open(DB_VULNS, 'r').read())["_default"]

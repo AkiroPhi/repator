@@ -8,7 +8,10 @@ DB_AUDITORS = "db/auditors.json"
 DB_CLIENTS = "db/clients.json"
 DB_VULNS = "db/vulnerabilities.json"
 DB_VULNS_GIT = "db/vulnerabilitiesGit.json"
-DB_VULNS_GIT_UPDATED = ".tmpGit/vulnerabilities.json"
+DB_VULNS_GIT_DIR = ".tmpGit/"
+DB_VULNS_GIT_FILE = "vulnerabilities.json"
+DB_VULNS_GIT_UPDATED = DB_VULNS_GIT_DIR + DB_VULNS_GIT_FILE
+
 
 DB_AUDITORS_DEFAULT = collections.OrderedDict()
 DB_AUDITORS_DEFAULT["full_name"] = "Dummy name"
