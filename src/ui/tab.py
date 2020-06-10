@@ -94,7 +94,7 @@ class Tab(QScrollArea):
 
         if history_field_name in self.fields:
             index = self.fields[history_field_name].currentIndex()
-            if self.fields[field_name].to_plain_text() != doc[field_tab[0] + "History"][index]:
+            if index == -1 or self.fields[field_name].to_plain_text() != doc[field_tab[0] + "History"][index]:
                 self.fields[history_field_name].setCurrentIndex(0)
         self.database.update(int(field_tab[1]), field_tab[0], string)
 
