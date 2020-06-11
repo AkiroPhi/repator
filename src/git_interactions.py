@@ -93,18 +93,22 @@ class Git(QObject):
         except GitCommandError as err:
             print(err)
             self.git_reachable = False
+        #TODO: refresh here
+        if Git.git_changed():
+            copyfile(DB_VULNS_GIT_UPDATED, DB_VULNS_GIT)
         self.update_changes_button_colors(repator, diffs)
 
 
     @staticmethod
     def git_changed():
         """Compares DB_VULNS_GIT_UPDATED and DB_VULNS_GIT"""
+        #TODO: change with self.repo.is_dirty() ??
         if DB_VULNS_GIT_UPDATED:
             json_db_initial = json.loads(
                 open(DB_VULNS_GIT, 'r').read())["_default"]
-            json_db_updated = json.loads(open(DB_VULNS_GIT_UPDATED, 'r').read())[
-                "_default"]
+            json_db_updated = json.loads(open(DB_VULNS_GIT_UPDATED, 'r').read())["_default"]
             return json_db_updated != json_db_initial
+
         else:
             return False
 
@@ -126,14 +130,6 @@ class Git(QObject):
             view_change_button.setStyleSheet(
                 "QPushButton { background-color : light gray }")
 
-        if diffs and diffs.isVisible():
-                refresh_button = diffs.layout().itemAt(0).widget().widget(0
-                ).widget.layout().itemAt(3).widget()
-                if Git.git_changed():
-                    refresh_button.setStyleSheet("QPushButton { background-color : red }")
-                else:
-                    refresh_button.setStyleSheet("QPushButton { background-color : light gray }")
-
         git_connection = repator.layout().itemAt(5).widget()
         if self.git_reachable:
             git_connection.setStyleSheet("QLabel { background-color : green }")
@@ -148,7 +144,6 @@ class Git(QObject):
             self.background_update.start()
         for window in self.app.topLevelWidgets():
             if window.windowTitle() == "Diffs" and self.git_reachable:
-                copyfile(DB_VULNS_GIT_UPDATED, DB_VULNS_GIT)
                 window.refresh_tab_widget()
 
     def git_routine(self):
@@ -157,6 +152,9 @@ class Git(QObject):
         self.background_thread.start()
 
     def git_upload(self):
+        """
+        Uploads to the repo the updated file (vulns)
+        """
         self.repo.index.add(DB_VULNS_GIT_FILE)
         self.repo.index.commit('Commit auto')
         self.repo.remote().pull('master')
