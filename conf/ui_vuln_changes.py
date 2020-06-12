@@ -6,11 +6,13 @@ import collections
 
 from PyQt5.QtWidgets import QLabel, QComboBox
 
-from conf.report import BLUE, RED, GREEN
+from conf.report import BLUE, RED, GREEN, COLORS
 
 
-def vuln_changes(doc_id, vuln1, vuln2, style, lang=""):
-    """Adds a the arguments to construct a differences tab given later to src.ui.tab.parseLst"""
+def vuln_changes(doc_id: int, vuln1: dict, vuln2: dict, style: COLORS, lang: str = "") -> collections.OrderedDict :
+    """
+    Adds a the arguments to construct a differences tab given later to src.ui.tab.parseLst.
+    """
     if style == BLUE:
         status = "Modified"
     elif style == RED:

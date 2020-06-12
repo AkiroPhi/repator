@@ -93,9 +93,12 @@ class Git(QObject):
         except GitCommandError as err:
             print(err)
             self.git_reachable = False
-        #TODO: refresh here
+
         if Git.git_changed():
             copyfile(DB_VULNS_GIT_UPDATED, DB_VULNS_GIT)
+            if diffs and diffs.isVisible():
+                refresh_button = diffs.layout().itemAt(0).widget().widget(0).widget.layout().itemAt(3).widget()
+                refresh_button.setStyleSheet("QPushButton { background-color : red }")
         self.update_changes_button_colors(repator, diffs)
 
 
@@ -143,7 +146,7 @@ class Git(QObject):
                 target=self.git_update, daemon=True)
             self.background_update.start()
         for window in self.app.topLevelWidgets():
-            if window.windowTitle() == "Diffs" and self.git_reachable:
+            if window.windowTitle() == "Diffs":
                 window.refresh_tab_widget()
 
     def git_routine(self):

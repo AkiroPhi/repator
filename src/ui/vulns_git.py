@@ -121,19 +121,25 @@ class VulnsGit(QWidget):
         self.buttons["hideBtn"] = GitButton(
             "Hide changes", "hide", self)
         self.buttons["patchBtn"] = GitButton("Patch", "patch", self)
+
         self.buttons["hideOneBtn"] = QPushButton(
             "Hide changes for this vuln")
         self.buttons["patchOneBtn"] = QPushButton("Patch this vuln")
+        self.buttons["duplicateOneButton"] = QPushButton("Duplicate this vuln")
+
         # self.buttons["uploadBtn"].clicked.connect(self.upload_changes)
         # self.buttons["hideBtn"].clicked.connect(self.hide_changes)
         # self.buttons["patchBtn"].clicked.connect(self.patch_changes)
         self.buttons["hideOneBtn"].clicked.connect(self.hide_one_change)
         self.buttons["patchOneBtn"].clicked.connect(self.patch_one_change)
+        self.buttons["duplicateOneButton"].clicked.connect(self.duplicate_one_vuln)
+
         self.grid.addWidget(self.buttons["uploadBtn"], 1, 0)
         self.grid.addWidget(self.buttons["hideBtn"], 1, 1)
         self.grid.addWidget(self.buttons["patchBtn"], 1, 2)
         self.grid.addWidget(self.buttons["hideOneBtn"], 1, 1)
         self.grid.addWidget(self.buttons["patchOneBtn"], 1, 2)
+        self.grid.addWidget(self.buttons["duplicateOneButton"], 1, 3)
 
         # TODO: remove this as the corresponding features are added.
 #         self.buttons["uploadBtn"].setEnabled(False)
@@ -146,7 +152,8 @@ class VulnsGit(QWidget):
         if not index:
             self.show_buttons_all_view()
         else:
-            self.show_buttons_changes_view()
+            ident = self.tabw.tabText(index)
+            self.show_buttons_changes_view(self.style[ident] == BLUE)
 
     def show_buttons_all_view(self):
         """Shows the buttons that have to be displayed when in the tab "All"."""
@@ -155,14 +162,37 @@ class VulnsGit(QWidget):
         self.buttons["patchBtn"].show()
         self.buttons["hideOneBtn"].hide()
         self.buttons["patchOneBtn"].hide()
+        self.buttons["duplicateOneButton"].hide()
 
-    def show_buttons_changes_view(self):
+    def show_buttons_changes_view(self, duplicate):
         """Shows the buttons that have to be displayed when in any tab but "All"."""
         self.buttons["uploadBtn"].show()
         self.buttons["hideBtn"].hide()
         self.buttons["patchBtn"].hide()
         self.buttons["hideOneBtn"].show()
         self.buttons["patchOneBtn"].show()
+        if duplicate:
+            self.buttons["duplicateOneButton"].show()
+        else:
+            self.buttons["duplicateOneButton"].hide()
+    def duplicate_one_vuln(self):
+        """Duplicate one vuln"""
+        index = self.tabw.currentIndex()
+        ident = self.tabw.tabText(index)
+        new_ident = max([int(x) for x in list(self.json_db.keys()) + list(self.json_db_git.keys()) ]) + 1
+        jsondb = "{\"_default\":" + \
+            json.dumps({(new_ident if x == ident else int(x)): self.json_db[x]
+                        for x in self.json_db.keys()}, sort_keys=True) + "}"
+        with open(DB_VULNS, 'w') as output:
+            output.write(jsondb)
+        for window in self.app.topLevelWidgets():
+            if window.windowTitle() == "Repator":
+                repator = window
+        self.refresh_repator(repator)
+        self.update_diffs()
+        self.refresh_tab_widget()
+        self.close_tab(index)
+
 
     def upload_changes(self, checked):
         """uploads changes made to local vuln database to the git repository."""
