@@ -36,12 +36,14 @@ class Risk():
         self.std_dict = defaultdict(lambda : self.dvalue_std_dict)
 
     def parseScriptRisk(self, args, tupletRegex):
-        """Parse the result of the script executed using args.\n
-        tupletRegex must contain some regex, allowing to define vulnerable and not vulnerable"""
+        """Parse the result of the script executed using args.
+        tupletRegex must contain 2 regex, allowing to define
+        vulnerable (first regex) and not vulnerable (second regex)"""
         stdScript = self.exec_command(args)
 
         if stdScript == None:
-            raise AssertionError("Error, this command is not supported ! : '" + args + "'")
+            raise AssertionError(
+                "Error, this command is not supported ! : '" + args + "'")
         
         # Retrieving standard and error outputs
         std_out = stdScript[self.indexOutPopen]
@@ -61,7 +63,8 @@ class Risk():
             try:
                 compressed = zlib.compress(std_out)
                 if self.std_dict[(compressed, tupletRegex)] != self.dvalue_std_dict:
-                    return (self.std_dict[(compressed, tupletRegex)], not Risk.std_empty(std_err), std_err)
+                    return (self.std_dict[(compressed, tupletRegex)],
+                        not Risk.std_empty(std_err), std_err)
             except:
                 pass
 
@@ -88,7 +91,8 @@ class Risk():
                 self.std_dict[(compressed, tupletRegex)] = self.risk_todo
                 return (self.risk_todo, not Risk.std_empty(std_err), std_err)
             
-            # Otherwise, we return the risk corresponding to the number of regex matched
+            # Otherwise, we return the risk corresponding to the number of regex
+            #   matched
             self.std_dict[(compressed, tupletRegex)] = self.get_risk(lst_vulns)
             return (self.get_risk(lst_vulns), not Risk.std_empty(std_err), std_err)
                 
@@ -106,7 +110,7 @@ class Risk():
         return self.risk_any
 
     def exec_command(self, args, cwd="."):
-        """Execute a child program in a new process, and return """
+        """Execute a child program in a new process, and return the communication"""
         if not (self.check_args(args)):
             return None
         process = Popen(args, stdout=PIPE, stderr=PIPE, shell=True, cwd=cwd)
