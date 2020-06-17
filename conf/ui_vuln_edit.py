@@ -125,6 +125,27 @@ def vuln_editing(doc_id, vuln, lang=""):
         "arg": vuln["reco"+lang].replace("\n", "<br/>") if vuln["reco"+lang] else (
             vuln["reco"].replace("\n", "<br/>"))
     }
+    lst["script"+lang+"-" + str(doc_id)] = {
+        "class": QLineEdit,
+        "label": "Status script",
+        "signal": "textChanged",
+        "signalFct": "update_vuln",
+        "arg": vuln["script"+lang] if vuln["script"+lang] else vuln["script"]
+    }
+    lst["regexVuln"+lang+"-" + str(doc_id)] = {
+        "class": QLineEdit,
+        "label": "Regex Vulnerable",
+        "signal": "textChanged",
+        "signalFct": "update_vuln",
+        "arg": vuln["regexVuln"+lang] if vuln["regexVuln"+lang] else vuln["regexVuln"]
+    }
+    lst["regexNotVuln"+lang+"-" + str(doc_id)] = {
+        "class": QLineEdit,
+        "label": "Regex Not Vulnerable",
+        "signal": "textChanged",
+        "signalFct": "update_vuln",
+        "arg": vuln["regexNotVuln"+lang] if vuln["regexNotVuln"+lang] else vuln["regexNotVuln"]
+    }
     lst["CVSS"] = {"class": QLabel,
                    "col": 0}
     lst["AV0"] = {"class": QLabel,

@@ -12,6 +12,7 @@ from conf.report import LANGUAGES
 from conf.ui_auditors import add_people
 from conf.ui_vuln_edit import vuln_editing
 from conf.ui_vulns import add_vuln
+from src.status_vuln import status_vuln
 from src.cvss import cvssv3, risk_level
 from src.dbhandler import DBHandler
 from src.ui.diff_status import DiffStatus
@@ -94,7 +95,7 @@ class Tab(QScrollArea):
 
         if history_field_name in self.fields:
             index = self.fields[history_field_name].currentIndex()
-            if self.fields[field_name].to_plain_text() != doc[field_tab[0] + "History"][index]:
+            if index == -1 or self.fields[field_name].to_plain_text() != doc[field_tab[0] + "History"][index]:
                 self.fields[history_field_name].setCurrentIndex(0)
         self.database.update(int(field_tab[1]), field_tab[0], string)
 
@@ -344,6 +345,7 @@ class Tab(QScrollArea):
 
     def add_vuln(self):
         """Adds a vuln to the database and displays it as a newly added vuln."""
+        print("ajout nouvelle vuln")
         doc_id = self.database.insert_record()
         lst = OrderedDict()
         add_vuln(lst, doc_id, self.database.search_by_id(doc_id))
@@ -352,6 +354,17 @@ class Tab(QScrollArea):
             self.lst[ident] = field
         self.fields["categorySort"].connect_buttons(doc_id)
         self.fields["diff-"+str(doc_id)].added()
+
+    def status_vulns(self):
+        for name in self.fields:
+            split = name.split("-")
+            if len(split) == 2 and split[0] == "id" and len(split[1]) > 0:
+                doc_id = split[1]
+                vuln = self.database.search_by_id(int(doc_id))
+                result = status_vuln(vuln["script"], (vuln["regexVuln"], vuln["regexNotVuln"]))
+                if not result is None and "isVuln-" + doc_id in self.fields:
+                    self.fields["isVuln-" +
+                                doc_id].setCurrentText(result[0])
 
     def add_auditor(self):
         """Adds an auditor to the database and displays it."""
@@ -472,15 +485,6 @@ class Tab(QScrollArea):
 
             if "selectionMode" in field:
                 widget.setSelectionMode(field["selectionMode"])
-
-            if "clicked" in field:
-                widget.clicked.connect(getattr(self, field["clicked"]))
-
-            if "setStyleSheet" in field:
-                widget.setStyleSheet(field["setStyleSheet"])
-
-            if "setReadOnly" in field:
-                widget.setReadOnly(field["setReadOnly"])
 
             if "label" in field:
                 label = QLabel(field["label"])

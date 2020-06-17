@@ -15,6 +15,11 @@ VULNS["add"] = {"class": QPushButton,
                 "clicked": "add_vuln",
                 "col": 0,
                 "colspan": 2}
+VULNS["statusVuln"] = {"class": QPushButton,
+                       "arg": "Status of Vulnerabilitys",
+                       "clicked": "status_vulns",
+                       "col": 6,
+                       "colspan": 2}
 VULNS["categorySort"] = {"class": SortButton,
                          "args": ["category", True],
                          "col": 2}
