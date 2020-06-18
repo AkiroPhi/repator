@@ -79,10 +79,10 @@ def add_vuln(lst, doc_id, vuln):
                                     "signalFct": "enable_row",
                                     "items": ("NA", "TODO", "Not Vulnerable", "Vulnerable"),
                                     "col": 5}
-    lst["testScript-" + str(doc_id)] = {"class": QPushButton,
-                                        "clicked": "status_vuln",
-                                        "arg": "Run test",
-                                        "col": 6}
+    lst["buttonScript-" + str(doc_id)] = {"class": QPushButton,
+                                          "clicked": "status_vuln",
+                                          "arg": "Run test",
+                                          "col": 6}
     lst["edit-" + str(doc_id)] = {"class": QPushButton,
                                   "clicked": "edit_vuln",
                                   "arg": "Edit",

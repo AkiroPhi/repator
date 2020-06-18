@@ -1,8 +1,8 @@
 """Module that generates the different tab types"""
 
 # coding=utf-8
-
 from collections import OrderedDict
+from functools import partial
 from re import sub
 
 from PyQt5.QtCore import QDateTime, Qt, QDate
@@ -30,8 +30,9 @@ class Tab(QScrollArea):
         self.row = 0
         self.lst = self.head_lst
         self.values = OrderedDict()
-        self.init_tab()
         self.valid_status_vuln = ["Vulnerable", "Not Vulnerable"]
+        self.lst_runs = OrderedDict()
+        self.init_tab()
 
     def init_tab(self):
         """Initializes features and widgets of a tab."""
@@ -52,6 +53,13 @@ class Tab(QScrollArea):
         self.widget.setLayout(self.grid)
         self.setWidget(self.widget)
         self.setWidgetResizable(True)
+
+    def init_buttons_status(self):
+        for ident, button in self.lst_runs.items():
+            name = ident.split("-")
+            if len(name) == 2 and name[0] == "buttonScript":
+                vuln = self.database.search_by_id(int(name[1]))
+                self.update_button(button, vuln["script"])
 
     def change_value(self, string=None):
         """Changes the value of a field with the provided encoding."""
@@ -99,8 +107,11 @@ class Tab(QScrollArea):
             if index == -1 or self.fields[field_name].to_plain_text() != doc[field_tab[0] + "History"][index]:
                 self.fields[history_field_name].setCurrentIndex(0)
         self.database.update(int(field_tab[1]), field_tab[0], string)
-
         self.update_cvss(field_tab[1])
+
+    def update_button(self, button, string=None):
+        button.setEnabled(len(string) > 0)
+
 
     def load_history(self, index):
         """Writes the string into the non-History field of the sender."""
@@ -296,12 +307,12 @@ class Tab(QScrollArea):
             lst = dict()
             for lang in LANGUAGES:
                 if first_lang:
-                    lst[lang] = vuln_editing(doc_id, vuln)
+                    lst[lang] = vuln_editing(doc_id, vuln, self.lst_runs["buttonScript-" + doc_id])
                     first_lang = False
                 else:
-                    lst[lang] = vuln_editing(doc_id, vuln, lang)
+                    lst[lang] = vuln_editing(doc_id, vuln, self.lst_runs["buttonScript-" + doc_id], lang)
         else:
-            lst = vuln_editing(doc_id, vuln)
+            lst = vuln_editing(doc_id, vuln, self.lst_runs["buttonScript-" + doc_id])
         self._parent.add_tab(str(doc_id), lst, self.database)
         if len(LANGUAGES) > 1:
             for lang in LANGUAGES:
@@ -342,6 +353,7 @@ class Tab(QScrollArea):
         if doc_id in self.values:
             del self.values[doc_id]
         self.database.delete(int(doc_id))
+        del self.lst_runs["buttonScript-" + doc_id]
         self.fields["categorySort"].update_values()
 
     def add_vuln(self):
@@ -438,6 +450,9 @@ class Tab(QScrollArea):
             else:
                 widget = field["class"](self)
 
+            if "buttonScript" in ident:
+                self.lst_runs[ident] = widget
+
             widget.setAccessibleName(ident)
             self.fields[ident] = widget
 
@@ -447,6 +462,10 @@ class Tab(QScrollArea):
                         getattr(self, field["signalFct"]))
                 else:
                     getattr(widget, field["signal"]).connect(self.change_value)
+
+                if "signalFctButton" in field:
+                    getattr(widget, field["signal"]).connect(
+                        partial(getattr(self, field["signalFctButton"]), field["button"]))
 
             if "help" in field:
                 widget.setToolTip(field["help"])
@@ -512,3 +531,6 @@ class Tab(QScrollArea):
                 self.grid.addWidget(widget, self.row, 0, 1, 2)
 
             self.row += 1
+
+        if len(self.lst_runs) > 0:
+            self.init_buttons_status()
