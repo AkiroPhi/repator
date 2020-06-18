@@ -9,7 +9,7 @@ from copy import copy
 from PyQt5.QtGui import QColor
 from PyQt5.QtCore import Qt, QCoreApplication
 from PyQt5.QtWidgets import (QWidget, QTabWidget, QGridLayout, QTabBar,
-                             QPushButton, QLabel, QComboBox)
+                             QPushButton, QLabel, QComboBox, QHBoxLayout)
 
 from conf.ui_vuln_changes import vuln_changes
 from conf.ui_vulns_initial import VULNS_INITIAL
@@ -118,14 +118,14 @@ class VulnsGit(QWidget):
     def init_bottom_buttons(self):
         """Creates the buttons at the bottom of the window "Diffs"."""
         self.buttons["uploadBtn"] = GitButton("Upload changes", "upload", self)
-        self.buttons["hideBtn"] = GitButton(
-            "Hide changes", "hide", self)
+        self.buttons["hideBtn"] = GitButton("Hide changes", "hide", self)
         self.buttons["patchBtn"] = GitButton("Patch", "patch", self)
 
         self.buttons["hideOneBtn"] = QPushButton(
             "Hide changes for this vuln")
         self.buttons["patchOneBtn"] = QPushButton("Patch this vuln")
         self.buttons["duplicateOneButton"] = QPushButton("Duplicate this vuln")
+        self.buttons["uploadOneBtn"] = QPushButton("Upload this vuln")
 
         # self.buttons["uploadBtn"].clicked.connect(self.upload_changes)
         # self.buttons["hideBtn"].clicked.connect(self.hide_changes)
@@ -134,15 +134,30 @@ class VulnsGit(QWidget):
         self.buttons["patchOneBtn"].clicked.connect(self.patch_one_change)
         self.buttons["duplicateOneButton"].clicked.connect(self.duplicate_one_vuln)
 
-        self.grid.addWidget(self.buttons["uploadBtn"], 1, 0)
-        self.grid.addWidget(self.buttons["hideBtn"], 1, 1)
-        self.grid.addWidget(self.buttons["patchBtn"], 1, 2)
-        self.grid.addWidget(self.buttons["hideOneBtn"], 1, 1)
-        self.grid.addWidget(self.buttons["patchOneBtn"], 1, 2)
-        self.grid.addWidget(self.buttons["duplicateOneButton"], 1, 3)
+        self.grid.addWidget(QWidget(), 1, 0)
+        self.grid.addWidget(QWidget(), 1 ,0)
+
+        bottomButton = QGridLayout()
+        bottomButton.setSpacing(5)
+        bottomButton.setContentsMargins(5, 5, 5, 5)
+
+        bottomButton.addWidget(self.buttons["uploadBtn"], 0, 0)
+        bottomButton.addWidget(self.buttons["hideBtn"], 0, 1)
+        bottomButton.addWidget(self.buttons["patchBtn"], 0, 2)
+        self.grid.itemAt(1).widget().setLayout(bottomButton)
+
+        bottomButton = QGridLayout()
+        bottomButton.setSpacing(5)
+        bottomButton.setContentsMargins(5, 5, 5, 5)
+
+        bottomButton.addWidget(self.buttons["uploadOneBtn"], 0, 0)
+        bottomButton.addWidget(self.buttons["hideOneBtn"], 0, 1)
+        bottomButton.addWidget(self.buttons["patchOneBtn"], 0, 2)
+        bottomButton.addWidget(self.buttons["duplicateOneButton"], 0, 3)
+        self.grid.itemAt(2).widget().setLayout(bottomButton)
 
         # TODO: remove this as the corresponding features are added.
-#         self.buttons["uploadBtn"].setEnabled(False)
+        self.buttons["uploadOneBtn"].setEnabled(False)
 
         self.show_buttons_all_view()
 
@@ -157,24 +172,16 @@ class VulnsGit(QWidget):
 
     def show_buttons_all_view(self):
         """Shows the buttons that have to be displayed when in the tab "All"."""
-        self.buttons["uploadBtn"].show()
-        self.buttons["hideBtn"].show()
-        self.buttons["patchBtn"].show()
-        self.buttons["hideOneBtn"].hide()
-        self.buttons["patchOneBtn"].hide()
-        self.buttons["duplicateOneButton"].hide()
+        self.grid.itemAt(2).widget().hide()
+        self.grid.itemAt(1).widget().show()
+
 
     def show_buttons_changes_view(self, duplicate):
         """Shows the buttons that have to be displayed when in any tab but "All"."""
-        self.buttons["uploadBtn"].show()
-        self.buttons["hideBtn"].hide()
-        self.buttons["patchBtn"].hide()
-        self.buttons["hideOneBtn"].show()
-        self.buttons["patchOneBtn"].show()
-        if duplicate:
-            self.buttons["duplicateOneButton"].show()
-        else:
-            self.buttons["duplicateOneButton"].hide()
+        self.grid.itemAt(1).widget().hide()
+        self.grid.itemAt(2).widget().show()
+
+
     def duplicate_one_vuln(self):
         """Duplicate one vuln"""
         index = self.tabw.currentIndex()
@@ -201,6 +208,16 @@ class VulnsGit(QWidget):
         # remote git repository.
         # => Need une fonction qui va vérifier la cohérence des bases de
         # données.
+
+        # first pull the repo -->
+        # if changed --> warning + window
+        # else commit and push --> self.git.git_upload()
+        # if self.git.git_update():
+        #     self.refresh_tab_widget()
+        #     WarningWindow = QMessageBox()
+        #     WarningWindow.setText("Please update, the file just has been updated")
+        #     WarningWindow.exec()
+        #     return
         for ident in checked:
             if self.style[ident] == GREEN: # if the style is green, it's mean that the vuln is present in the git db and not in the local db
                 del self.json_db_git[ident]
@@ -254,6 +271,7 @@ class VulnsGit(QWidget):
         index = self.tabw.currentIndex()
         ident = self.tabw.tabText(index)
         self.hidden_vulns.add(ident)
+        self.buttons["hideBtn"].checked[ident] = True
         fields = self.tabw.widget(0).fields
         for widget in fields:
             name = widget.split("-")
