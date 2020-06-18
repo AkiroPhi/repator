@@ -31,6 +31,7 @@ class Tab(QScrollArea):
         self.lst = self.head_lst
         self.values = OrderedDict()
         self.init_tab()
+        self.valid_status_vuln = ["Vulnerable", "Not Vulnerable"]
 
     def init_tab(self):
         """Initializes features and widgets of a tab."""
@@ -345,7 +346,6 @@ class Tab(QScrollArea):
 
     def add_vuln(self):
         """Adds a vuln to the database and displays it as a newly added vuln."""
-        print("ajout nouvelle vuln")
         doc_id = self.database.insert_record()
         lst = OrderedDict()
         add_vuln(lst, doc_id, self.database.search_by_id(doc_id))
@@ -355,16 +355,26 @@ class Tab(QScrollArea):
         self.fields["categorySort"].connect_buttons(doc_id)
         self.fields["diff-"+str(doc_id)].added()
 
+    def status_vuln(self):
+        sender = self.sender()
+        doc_id = sender.accessibleName().split("-")[1]
+        self.set_status_vuln(doc_id)
+
     def status_vulns(self):
         for name in self.fields:
             split = name.split("-")
             if len(split) == 2 and split[0] == "id" and len(split[1]) > 0:
                 doc_id = split[1]
-                vuln = self.database.search_by_id(int(doc_id))
-                result = status_vuln(vuln["script"], (vuln["regexVuln"], vuln["regexNotVuln"]))
-                if not result is None and "isVuln-" + doc_id in self.fields:
-                    self.fields["isVuln-" +
-                                doc_id].setCurrentText(result[0])
+                self.set_status_vuln(doc_id)
+
+    def set_status_vuln(self, doc_id):
+        vuln = self.database.search_by_id(int(doc_id))
+        if len(vuln["script"]) > 0:
+            result = status_vuln(vuln["script"], (vuln["regexVuln"], vuln["regexNotVuln"]))
+            if result is not None and result[0] in self.valid_status_vuln\
+                    and "isVuln-" + doc_id in self.fields:
+                self.fields["isVuln-" +
+                            doc_id].setCurrentText(result[0])
 
     def add_auditor(self):
         """Adds an auditor to the database and displays it."""

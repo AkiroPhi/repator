@@ -19,7 +19,7 @@ VULNS["statusVuln"] = {"class": QPushButton,
                        "arg": "Run all tests",
                        "clicked": "status_vulns",
                        "col": 6,
-                       "colspan": 2}
+                       "colspan": 3}
 VULNS["categorySort"] = {"class": SortButton,
                          "args": ["category", True],
                          "col": 2}
@@ -79,11 +79,15 @@ def add_vuln(lst, doc_id, vuln):
                                     "signalFct": "enable_row",
                                     "items": ("NA", "TODO", "Not Vulnerable", "Vulnerable"),
                                     "col": 5}
+    lst["testScript-" + str(doc_id)] = {"class": QPushButton,
+                                        "clicked": "status_vuln",
+                                        "arg": "Run test",
+                                        "col": 6}
     lst["edit-" + str(doc_id)] = {"class": QPushButton,
                                   "clicked": "edit_vuln",
                                   "arg": "Edit",
-                                  "col": 6}
+                                  "col": 7}
     lst["delete-" + str(doc_id)] = {"class": QPushButton,
                                     "clicked": "del_vuln",
                                     "arg": "Delete",
-                                    "col": 7}
+                                    "col": 8}
