@@ -20,20 +20,20 @@ class VulnStatus:
         self.indexErrPopen = 1
         self.indexRegVuln = 0
         self.indexRegNotVuln = 1
-        self.risk_any = "NA"
-        self.risk_todo = "TODO"
-        self.risk_vuln = "Vulnerable"
-        self.risk_nvuln = "Not Vulnerable"
+        self.status_any = "NA"
+        self.status_todo = "TODO"
+        self.status_vuln = "Vulnerable"
+        self.status_nvuln = "Not Vulnerable"
 
         # Internal memory to avoid repetition of calculations
         self.dvalue_std_dict = None
         self.std_dict = defaultdict(lambda: self.dvalue_std_dict)
 
-    def parse_script(self, args: str, tuplet_regex: tuple) -> tuple:
+    def parse_script(self, args: str, tuplet_regex: tuple, encoding=default_encoding) -> tuple:
         """Parse the result of the script executed using args.
         tupletRegex must contain some regex, allowing to define vulnerable and not vulnerable
 
-        Returns a tuplet containing the risk, a boolean saying if the executed script contains
+        Returns a tuplet containing the status of vuln, a boolean saying if the executed script contains
         an error message, and the error message if the boolean is true, None otherwise"""
         stdScript = self.exec_command(args)
 
@@ -45,21 +45,21 @@ class VulnStatus:
         std_err = stdScript[self.indexErrPopen]
 
         # If the standart output is not empty, we parse the result
-        if not VulnStatus.std_empty(std_out):
+        if not VulnStatus.std_empty(std_out, encoding):
 
             # We check if the text has already been parsed with the regex tuplet
-            # If it's true, we use the registered risk
+            # If it's true, we use the registered status
             compressed = None
             try:
                 compressed = zlib.compress(std_out)
                 if self.std_dict[(compressed, tuplet_regex)] != self.dvalue_std_dict:
-                    return self.std_dict[(compressed, tuplet_regex)], not VulnStatus.std_empty(std_err), std_err
+                    return self.std_dict[(compressed, tuplet_regex)], not VulnStatus.std_empty(std_err, encoding), std_err
             except zlib.error:
                 pass
 
             # TEXT ENCODING (default : ISO-8859-1)
             # PARSING THE TEXT
-            text = VulnStatus.decode_string(std_out)
+            text = VulnStatus.decode_string(std_out, encoding)
             lst_vulns = [False] * len(tuplet_regex)
             for line in text.split("\n"):
                 tmp = VulnStatus.check_vuln(line, tuplet_regex)
@@ -67,32 +67,32 @@ class VulnStatus:
                     if tmp[i]:
                         lst_vulns[i] = True
 
-                # If each regex has been matched, we return the risk 'TODO'
+                # If each regex has been matched, we return the status 'TODO'
                 if lst_vulns.count(True) == len(lst_vulns):
-                    self.std_dict[(compressed, tuplet_regex)] = self.risk_todo
-                    return self.risk_todo, not VulnStatus.std_empty(std_err), std_err
+                    self.std_dict[(compressed, tuplet_regex)] = self.status_todo
+                    return self.status_todo, not VulnStatus.std_empty(std_err, encoding), std_err
 
-            # If no regex has been matched, we return the risk 'ANY'
+            # If no regex has been matched, we return the status 'ANY'
             if lst_vulns.count(True) == 0:
-                self.std_dict[(compressed, tuplet_regex)] = self.risk_any
-                return self.risk_any, not VulnStatus.std_empty(std_err), std_err
+                self.std_dict[(compressed, tuplet_regex)] = self.status_any
+                return self.status_any, not VulnStatus.std_empty(std_err, encoding), std_err
 
-            # Otherwise, we return the risk corresponding to the number of regex matched
-            self.std_dict[(compressed, tuplet_regex)] = self.get_risk(lst_vulns)
-            return self.get_risk(lst_vulns), not VulnStatus.std_empty(std_err), std_err
+            # Otherwise, we return the status corresponding to the number of regex matched
+            self.std_dict[(compressed, tuplet_regex)] = self.get_status(lst_vulns)
+            return self.get_status(lst_vulns), not VulnStatus.std_empty(std_err, encoding), std_err
 
-    def get_risk(self, lst: list):
-        """Returns the risk corresponding to the tuplet passed in parameter
-            If only the first element is True, we send the risk 'VULNERABLE'
-            Else if only the last element is True, we send the risk 'NOT VULNERABLE'
-            Else, we send the risk 'ANY'
+    def get_status(self, lst: list):
+        """Returns the status corresponding to the tuplet passed in parameter
+            If only the first element is True, we send the status 'VULNERABLE'
+            Else if only the last element is True, we send the status 'NOT VULNERABLE'
+            Else, we send the status 'ANY'
                 This case is only possible if it is a tuplet larger than 2
         """
         if lst[self.indexRegVuln] and not lst[self.indexRegNotVuln]:
-            return self.risk_vuln
+            return self.status_vuln
         elif not lst[self.indexRegVuln] and lst[self.indexRegNotVuln]:
-            return self.risk_nvuln
-        return self.risk_any
+            return self.status_nvuln
+        return self.status_any
 
     def exec_command(self, args: str, cwd="."):
         """Execute a child program in a new process, and return """
@@ -117,7 +117,7 @@ class VulnStatus:
         return lst_return
 
 
-risk = VulnStatus()
+status = VulnStatus()
 
-def status_vuln(args, regex):
-    return risk.parse_script("ls -l", regex)
+def status_vuln(args, regex, encoding=default_encoding):
+    return status.parse_script(args, regex, encoding)
