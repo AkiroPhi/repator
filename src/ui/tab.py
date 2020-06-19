@@ -56,6 +56,7 @@ class Tab(QScrollArea):
         self.setWidgetResizable(True)
 
     def init_buttons_status(self):
+        """Initializes the buttons that must be blocked (contain 'buttonScript')"""
         for ident in self.fields:
             if "buttonScript" in ident:
                 doc = self.database.search_by_id(int(ident.split("-")[1]))
@@ -110,19 +111,24 @@ class Tab(QScrollArea):
         self.update_cvss(field_tab[1])
 
     def update_button(self, string=None):
+        """"Updates the button corresponding to the 'Script' field of the modified vulnerability.
+        If the 'Script' field is empty, the button is disabled. Otherwise it's activated"""
+
+        # Get the object that sent the signal (the modified 'Script' field)
         sender = self.sender()
-        id = ""
+        doc_id = ""
+
+        # We go up the parents until we find the Vulns tab, retrieving the modified vulnerability ID
         while True:
             field_name = sender.accessibleName()
             if "vulns" in field_name:
                 break
             if field_name:
-                id = field_name.split('-')[1]
+                doc_id = field_name.split('-')[1]
             if sender.parent() is None:
                 return
             sender = sender.parent()
-        sender.tabs["All"].fields["buttonScript-" + id].setEnabled(len(string) > 0)
-
+        sender.tabs["All"].fields["buttonScript-" + doc_id].setEnabled(len(string) > 0)
 
     def load_history(self, index):
         """Writes the string into the non-History field of the sender."""
@@ -378,7 +384,11 @@ class Tab(QScrollArea):
         self.fields["diff-"+str(doc_id)].added()
 
     def status_vuln(self):
+        """Calculates the status of the selected vulnerability.
+        This method is called by a signal"""
         sender = self.sender()
+
+        # Gets the selected vulnerability ID
         while True:
             field_name = sender.accessibleName()
             if field_name:
@@ -389,32 +399,12 @@ class Tab(QScrollArea):
         self.set_status_vuln(sender.accessibleName().split("-")[1])
 
     def status_vulns(self):
+        """Calculates the status of all vulnerabilities.
+        This method is called by a signal"""
         for name in self.fields:
             split = name.split("-")
             if len(split) == 2 and split[0] == "id" and len(split[1]) > 0:
-                doc_id = split[1]
-                self.set_status_vuln(doc_id)
-
-    def set_status_vuln(self, doc_id):
-        sender = self.sender()
-        while True:
-            if sender.parent() is None:
-                break
-            sender = sender.parent()
-        fields = sender.tabs["Mission"].fields
-        vuln = self.database.search_by_id(int(doc_id))
-
-
-        if len(vuln["script"]) > 0:
-            script = vuln["script"]
-            for ident, field in fields.items():
-                if isinstance(field, QLineEdit) or isinstance(field, QDateEdit):
-                    script = script.replace("##" + ident + "##", field.text())
-            result = status_vuln(script, (vuln["regexVuln"], vuln["regexNotVuln"]))
-            if result is not None and result[0] in self.valid_status_vuln\
-                    and "isVuln-" + doc_id in self.fields:
-                self.fields["isVuln-" +
-                            doc_id].setCurrentText(result[0])
+                self.set_status_vuln(split[1])
 
     def add_auditor(self):
         """Adds an auditor to the database and displays it."""
@@ -424,6 +414,45 @@ class Tab(QScrollArea):
         self.parse_lst(lst)
         for ident, field in lst.items():
             self.lst[ident] = field
+
+    def set_status_vuln(self, doc_id):
+        """Internal method replacing the variables from the script corresponding with the ID"""
+
+        vuln = self.database.search_by_id(int(doc_id))
+        if "script" in vuln and len(vuln["script"]) > 0:
+
+            # Gets the Window tab
+            sender = self.sender()
+            while True:
+                if sender.parent() is None:
+                    break
+                sender = sender.parent()
+            fields = sender.tabs["Mission"].fields
+            script = vuln["script"]
+
+            # For each field of the Mission tab, we replace each occurence of the corresponding
+            #   variable by the value of the field in the script to execute
+            #   Variables are defined by ##(field_name)##
+            #   For the moment, the available variables are:
+            #       ##client##          --->    Replaced by the 'client' field
+            #       ##target##          --->    Replaced by the 'target' field
+            #       ##code##            --->    Replaced by the 'code' field
+            #       ##dateStart##       --->    Replaced by the 'dateStart' field
+            #       ##dateEnd##         --->    Replaced by the 'dateEnd' field
+            #       ##environment##     --->    Replaced by the 'environment' field
+            #       ##url##             --->    Replaced by the 'URL' field
+            #       ##ip##              --->    Replaced by the 'IP' field
+            #   Each variable can also be matched in uppercase, lowercase and capitalized
+            #    (ex: dateStart, datestart, DATESTART, Datestart)
+            for ident, field in fields.items():
+                if isinstance(field, QLineEdit) or isinstance(field, QDateEdit):
+                    for var_field in {ident, ident.lower(), ident.upper(), ident.capitalize()}:
+                        script = script.replace("##" + var_field + "##", field.text())
+            result = status_vuln(script, (vuln["regexVuln"], vuln["regexNotVuln"]))
+            if result is not None and result[0] in self.valid_status_vuln\
+                    and "isVuln-" + doc_id in self.fields:
+                self.fields["isVuln-" +
+                            doc_id].setCurrentText(result[0])
 
     def del_auditor(self):
         """Checks for all selected auditors and remove them from the display and the database."""
