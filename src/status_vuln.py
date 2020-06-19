@@ -20,7 +20,7 @@ class VulnStatus:
         self.indexErrPopen = 1
         self.indexRegVuln = 0
         self.indexRegNotVuln = 1
-        self.status_any = "NA"
+        self.status_na = "NA"
         self.status_todo = "TODO"
         self.status_vuln = "Vulnerable"
         self.status_nvuln = "Not Vulnerable"
@@ -74,12 +74,14 @@ class VulnStatus:
 
             # If no regex has been matched, we return the status 'ANY'
             if lst_vulns.count(True) == 0:
-                self.std_dict[(compressed, tuplet_regex)] = self.status_any
-                return self.status_any, not VulnStatus.std_empty(std_err, encoding), std_err
+                self.std_dict[(compressed, tuplet_regex)] = self.status_na
+                return self.status_na, not VulnStatus.std_empty(std_err, encoding), std_err
 
             # Otherwise, we return the status corresponding to the number of regex matched
             self.std_dict[(compressed, tuplet_regex)] = self.get_status(lst_vulns)
             return self.get_status(lst_vulns), not VulnStatus.std_empty(std_err, encoding), std_err
+        else:
+            return self.status_todo, False, None
 
     def get_status(self, lst: list):
         """Returns the status corresponding to the tuplet passed in parameter
@@ -92,7 +94,7 @@ class VulnStatus:
             return self.status_vuln
         elif not lst[self.indexRegVuln] and lst[self.indexRegNotVuln]:
             return self.status_nvuln
-        return self.status_any
+        return self.status_na
 
     def exec_command(self, args: str, cwd="."):
         """Execute a child program in a new process, and return """

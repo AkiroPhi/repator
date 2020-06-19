@@ -9,7 +9,7 @@ from PyQt5.QtWidgets import QLabel, QLineEdit, QComboBox
 from src.ui.rich_text_edit import RichTextEdit
 
 
-def vuln_editing(doc_id, vuln, buttonRun, lang=""):
+def vuln_editing(doc_id, vuln, lang=""):
     """Adds a the arguments to construct an edition of vulnerability tab given
     later to src.ui.tab.parseLst
     """
@@ -129,9 +129,7 @@ def vuln_editing(doc_id, vuln, buttonRun, lang=""):
         "class": QLineEdit,
         "label": "Status script",
         "signal": "textChanged",
-        "signalFct": "update_vuln",
-        "signalFctButton": "update_button",
-        "button": buttonRun,
+        "signalFct": ["update_vuln", "update_button"],
         "arg": vuln["script"+lang] if vuln["script"+lang] else vuln["script"]
     }
     lst["regexVuln"+lang+"-" + str(doc_id)] = {

@@ -31,6 +31,12 @@ MISSION["dateEnd"] = {"label": "End date",
 MISSION["environment"] = {"label": "Environment",
                           "class": QLineEdit,
                           "signal": "textChanged"}
+MISSION["url"] = {"label": "URL",
+                  "class": QLineEdit,
+                  "signal": "textChanged"}
+MISSION["ip"] = {"label": "IP",
+                 "class": QLineEdit,
+                 "signal": "textChanged"}
 MISSION["template"] = {"label": "Template",
                        "class": QComboBox,
                        "signal": "currentTextChanged",

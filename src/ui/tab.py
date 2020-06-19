@@ -6,7 +6,7 @@ from functools import partial
 from re import sub
 
 from PyQt5.QtCore import QDateTime, Qt, QDate
-from PyQt5.QtWidgets import QScrollArea, QGridLayout, QWidget, QLabel
+from PyQt5.QtWidgets import QScrollArea, QGridLayout, QWidget, QLabel, QLineEdit, QDateEdit
 
 from conf.report import LANGUAGES
 from conf.ui_auditors import add_people
@@ -30,9 +30,10 @@ class Tab(QScrollArea):
         self.row = 0
         self.lst = self.head_lst
         self.values = OrderedDict()
-        self.valid_status_vuln = ["Vulnerable", "Not Vulnerable"]
-        self.lst_runs = OrderedDict()
+        self.valid_status_vuln = ["TODO", "Vulnerable", "Not Vulnerable"]
+
         self.init_tab()
+        self.init_buttons_status()
 
     def init_tab(self):
         """Initializes features and widgets of a tab."""
@@ -55,11 +56,10 @@ class Tab(QScrollArea):
         self.setWidgetResizable(True)
 
     def init_buttons_status(self):
-        for ident, button in self.lst_runs.items():
-            name = ident.split("-")
-            if len(name) == 2 and name[0] == "buttonScript":
-                vuln = self.database.search_by_id(int(name[1]))
-                self.update_button(button, vuln["script"])
+        for ident in self.fields:
+            if "buttonScript" in ident:
+                doc = self.database.search_by_id(int(ident.split("-")[1]))
+                self.fields[ident].setEnabled(len(doc["script"]) > 0)
 
     def change_value(self, string=None):
         """Changes the value of a field with the provided encoding."""
@@ -109,8 +109,19 @@ class Tab(QScrollArea):
         self.database.update(int(field_tab[1]), field_tab[0], string)
         self.update_cvss(field_tab[1])
 
-    def update_button(self, button, string=None):
-        button.setEnabled(len(string) > 0)
+    def update_button(self, string=None):
+        sender = self.sender()
+        id = ""
+        while True:
+            field_name = sender.accessibleName()
+            if "vulns" in field_name:
+                break
+            if field_name:
+                id = field_name.split('-')[1]
+            if sender.parent() is None:
+                return
+            sender = sender.parent()
+        sender.tabs["All"].fields["buttonScript-" + id].setEnabled(len(string) > 0)
 
 
     def load_history(self, index):
@@ -307,12 +318,12 @@ class Tab(QScrollArea):
             lst = dict()
             for lang in LANGUAGES:
                 if first_lang:
-                    lst[lang] = vuln_editing(doc_id, vuln, self.lst_runs["buttonScript-" + doc_id])
+                    lst[lang] = vuln_editing(doc_id, vuln)
                     first_lang = False
                 else:
-                    lst[lang] = vuln_editing(doc_id, vuln, self.lst_runs["buttonScript-" + doc_id], lang)
+                    lst[lang] = vuln_editing(doc_id, vuln, lang)
         else:
-            lst = vuln_editing(doc_id, vuln, self.lst_runs["buttonScript-" + doc_id])
+            lst = vuln_editing(doc_id, vuln)
         self._parent.add_tab(str(doc_id), lst, self.database)
         if len(LANGUAGES) > 1:
             for lang in LANGUAGES:
@@ -353,7 +364,6 @@ class Tab(QScrollArea):
         if doc_id in self.values:
             del self.values[doc_id]
         self.database.delete(int(doc_id))
-        del self.lst_runs["buttonScript-" + doc_id]
         self.fields["categorySort"].update_values()
 
     def add_vuln(self):
@@ -369,8 +379,14 @@ class Tab(QScrollArea):
 
     def status_vuln(self):
         sender = self.sender()
-        doc_id = sender.accessibleName().split("-")[1]
-        self.set_status_vuln(doc_id)
+        while True:
+            field_name = sender.accessibleName()
+            if field_name:
+                break
+            if sender.parent() is None:
+                return
+            sender = sender.parent()
+        self.set_status_vuln(sender.accessibleName().split("-")[1])
 
     def status_vulns(self):
         for name in self.fields:
@@ -380,9 +396,21 @@ class Tab(QScrollArea):
                 self.set_status_vuln(doc_id)
 
     def set_status_vuln(self, doc_id):
+        sender = self.sender()
+        while True:
+            if sender.parent() is None:
+                break
+            sender = sender.parent()
+        fields = sender.get_tabs()["Mission"].fields
         vuln = self.database.search_by_id(int(doc_id))
+
+
         if len(vuln["script"]) > 0:
-            result = status_vuln(vuln["script"], (vuln["regexVuln"], vuln["regexNotVuln"]))
+            script = vuln["script"]
+            for ident, field in fields.items():
+                if isinstance(field, QLineEdit) or isinstance(field, QDateEdit):
+                    script = script.replace("##" + ident + "##", field.text())
+            result = status_vuln(script, (vuln["regexVuln"], vuln["regexNotVuln"]))
             if result is not None and result[0] in self.valid_status_vuln\
                     and "isVuln-" + doc_id in self.fields:
                 self.fields["isVuln-" +
@@ -450,22 +478,20 @@ class Tab(QScrollArea):
             else:
                 widget = field["class"](self)
 
-            if "buttonScript" in ident:
-                self.lst_runs[ident] = widget
-
             widget.setAccessibleName(ident)
             self.fields[ident] = widget
 
             if "signal" in field:
                 if "signalFct" in field:
-                    getattr(widget, field["signal"]).connect(
-                        getattr(self, field["signalFct"]))
+                    if isinstance(field["signalFct"], list):
+                        for signal in field["signalFct"]:
+                            getattr(widget, field["signal"]).connect(
+                                getattr(self, signal))
+                    else:
+                        getattr(widget, field["signal"]).connect(
+                            getattr(self, field["signalFct"]))
                 else:
                     getattr(widget, field["signal"]).connect(self.change_value)
-
-                if "signalFctButton" in field:
-                    getattr(widget, field["signal"]).connect(
-                        partial(getattr(self, field["signalFctButton"]), field["button"]))
 
             if "help" in field:
                 widget.setToolTip(field["help"])
@@ -531,6 +557,3 @@ class Tab(QScrollArea):
                 self.grid.addWidget(widget, self.row, 0, 1, 2)
 
             self.row += 1
-
-        if len(self.lst_runs) > 0:
-            self.init_buttons_status()
