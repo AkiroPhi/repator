@@ -72,10 +72,10 @@ class VulnStatus:
                     self.std_dict[(compressed, tuplet_regex)] = self.status_todo
                     return self.status_todo, not VulnStatus.std_empty(std_err, encoding), std_err
 
-            # If no regex has been matched, we return the status 'ANY'
+            # If no regex has been matched, we return the status 'TODO'
             if lst_vulns.count(True) == 0:
-                self.std_dict[(compressed, tuplet_regex)] = self.status_na
-                return self.status_na, not VulnStatus.std_empty(std_err, encoding), std_err
+                self.std_dict[(compressed, tuplet_regex)] = self.status_todo
+                return self.status_todo, not VulnStatus.std_empty(std_err, encoding), std_err
 
             # Otherwise, we return the status corresponding to the number of regex matched
             self.std_dict[(compressed, tuplet_regex)] = self.get_status(lst_vulns)

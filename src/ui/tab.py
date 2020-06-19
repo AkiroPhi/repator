@@ -401,7 +401,7 @@ class Tab(QScrollArea):
             if sender.parent() is None:
                 break
             sender = sender.parent()
-        fields = sender.get_tabs()["Mission"].fields
+        fields = sender.tabs["Mission"].fields
         vuln = self.database.search_by_id(int(doc_id))
 
 
