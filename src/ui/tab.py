@@ -467,20 +467,20 @@ class Tab(QScrollArea):
             \t##ip##\t\t\t--->\tReplaced by the 'IP' field\n\
             Each variable can also be matched in uppercase, lowercase and capitalized\n\
             \t(ex: dateStart, datestart, DATESTART, Datestart)"
+        self.display_popup(message, 0.9)
+
+    def display_popup(self, message, opacity, x=-1, y=-1, width=-1, height=-1):
         max_length_line = 0
         for line in message.split("\n"):
             if len(line) > max_length_line:
                 max_length_line = len(line)
-
         popup = Popup(message, self)
-        popup.setWindowOpacity(0.9)
-        popup.setGeometry(0, 0, max_length_line * 6, (message.count("\n") + 1) * 17)
+        popup.setWindowOpacity(opacity)
+        popup.setGeometry(0 if x < 0 else x,
+                          0 if y < 0 else y,
+                          max_length_line * 6 if width == -1 else width,
+                          (message.count("\n") + 1) * 17) if height == -1 else height
         popup.show()
-        """listWidget = QListWidget(self)
-        for n in ["Jack", "Chris", "Joey", "Kim", "Duncan"]:
-            QListWidgetItem(n, listWidget)
-        self.setGeometry(100, 100, 100, 100)
-        self.show()"""
 
     def del_auditor(self):
         """Checks for all selected auditors and remove them from the display and the database."""
@@ -597,7 +597,7 @@ class Tab(QScrollArea):
 
             if "label" in field:
                 if "help" in field:
-                    label = ClickableQLabel(field["label"])
+                    label = ClickableQLabel(field["label"] + " (?)")
                     label.clicked.connect(getattr(self, field["help"]))
                 else:
                     label = QLabel(field["label"])
