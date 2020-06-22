@@ -5,8 +5,7 @@ from collections import OrderedDict
 from re import sub
 
 from PyQt5.QtCore import QDateTime, Qt, QDate, pyqtSignal
-from PyQt5.QtWidgets import QScrollArea, QGridLayout, QWidget, QLabel, QLineEdit, QDateEdit, QListWidgetItem, \
-    QListWidget, QDialog
+from PyQt5.QtWidgets import QScrollArea, QGridLayout, QWidget, QLabel, QLineEdit, QDateEdit, QDialog
 
 from conf.report import LANGUAGES
 from conf.ui_auditors import add_people
@@ -30,7 +29,7 @@ class Tab(QScrollArea):
         self.row = 0
         self.lst = self.head_lst
         self.values = OrderedDict()
-        self.valid_status_vuln = ["TODO", "Vulnerable", "Not Vulnerable"]
+        self.valid_status_vuln = ["Vulnerable", "Not Vulnerable"]
 
         self.init_tab()
         self.init_buttons_status()
@@ -396,7 +395,7 @@ class Tab(QScrollArea):
             if sender.parent() is None:
                 return
             sender = sender.parent()
-        self.set_status_vuln(sender.accessibleName().split("-")[1])
+        self.set_status_vuln(sender.accessibleName().split("-")[1], dispay_popup_error=True)
 
     def status_vulns(self):
         """Calculates the status of all vulnerabilities.
@@ -415,7 +414,7 @@ class Tab(QScrollArea):
         for ident, field in lst.items():
             self.lst[ident] = field
 
-    def set_status_vuln(self, doc_id):
+    def set_status_vuln(self, doc_id, dispay_popup_error=False):
         """Internal method replacing the variables from the script corresponding with the ID"""
 
         vuln = self.database.search_by_id(int(doc_id))
@@ -430,31 +429,25 @@ class Tab(QScrollArea):
             fields = sender.tabs["Mission"].fields
             script = vuln["script"]
 
-            # For each field of the Mission tab, we replace each occurence of the corresponding
-            #   variable by the value of the field in the script to execute
-            #   Variables are defined by ##(field_name)##
-            #   For the moment, the available variables are:
-            #       ##client##          --->    Replaced by the 'client' field
-            #       ##target##          --->    Replaced by the 'target' field
-            #       ##code##            --->    Replaced by the 'code' field
-            #       ##dateStart##       --->    Replaced by the 'dateStart' field
-            #       ##dateEnd##         --->    Replaced by the 'dateEnd' field
-            #       ##environment##     --->    Replaced by the 'environment' field
-            #       ##url##             --->    Replaced by the 'URL' field
-            #       ##ip##              --->    Replaced by the 'IP' field
-            #   Each variable can also be matched in uppercase, lowercase and capitalized
-            #    (ex: dateStart, datestart, DATESTART, Datestart)
+            # Replace all variables
             for ident, field in fields.items():
                 if isinstance(field, QLineEdit) or isinstance(field, QDateEdit):
                     for var_field in {ident, ident.lower(), ident.upper(), ident.capitalize()}:
                         script = script.replace("##" + var_field + "##", field.text())
+
+            # Calculate the status and display a popup if necessary
             result = status_vuln(script, (vuln["regexVuln"], vuln["regexNotVuln"]))
             if result is not None and result[0] in self.valid_status_vuln\
                     and "isVuln-" + doc_id in self.fields:
                 self.fields["isVuln-" +
                             doc_id].setCurrentText(result[0])
+            elif dispay_popup_error and (result is None or not result[0] in self.valid_status_vuln):
+                self.display_error_test(result)
 
     def display_help_var(self):
+        """Displays a popup with all availables variables"""
+
+        # TODO: This method must be updated each time a new field is added to 'Mission' tab.
         message = "\
             For the moment, the available variables are:\n\
             \t##client##\t\t--->\tReplaced by the 'client' field\n\
@@ -469,7 +462,23 @@ class Tab(QScrollArea):
             \t(ex: dateStart, datestart, DATESTART, Datestart)"
         self.display_popup(message, 0.9)
 
+    def display_error_test(self, result):
+        """Internal method displaying a popup according to the content of result"""
+
+        if result is None:
+            message = "The current script is not executable, please check the syntax !"
+        elif result is not None and not result[0] in self.valid_status_vuln:
+            message = "The script has been executed but no status have been determined !"
+            if result[1]:
+                message += "\n\tAn error message have been found during execution : \n\n{}.".format(result[2])
+            else:
+                message += "\n\tNo error message have been found during execution."
+        self.display_popup(message, 0.9)
+
     def display_popup(self, message, opacity, x=-1, y=-1, width=-1, height=-1):
+        """Displays a simple popup with message.
+        The site of the popup can be chosen or calculated."""
+
         max_length_line = 0
         for line in message.split("\n"):
             if len(line) > max_length_line:
@@ -634,4 +643,11 @@ class Popup(QDialog):
     def __init__(self, name, parent=None):
         super().__init__(parent)
         self.name = name
-        self.label = QLabel(self.name, self)
+
+        self.grid = QGridLayout()
+        self.grid.setSpacing(5)
+        self.grid.setContentsMargins(10, 5, 10, 5)
+        self.grid.setAlignment(Qt.AlignTop)
+
+        self.grid.addWidget(QLabel(self.name, self))
+        self.setLayout(self.grid)
