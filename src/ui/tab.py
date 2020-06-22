@@ -361,7 +361,9 @@ class Tab(QScrollArea):
             if sender.parent() is None:
                 return
             sender = sender.parent()
-        sender.close_tab(list(sender.tabs).index(doc_id))
+
+        if doc_id in sender.tabs:
+            sender.close_tab(list(sender.tabs).index(doc_id))
 
         name_lst = list()
 
