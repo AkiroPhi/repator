@@ -73,7 +73,10 @@ class DBHandler:
         if dictionary is None:
             dictionary = collections.OrderedDict(self.search_by_id(1))
             for k in dictionary:
-                dictionary[k] = ""
+                if isinstance(dictionary[k], str):
+                    dictionary[k] = ""
+                elif isinstance(dictionary[k], list):
+                    dictionary[k] = [""]
         return self.database.insert(dictionary)
 
     def insert_multiple(self, dictionary):
