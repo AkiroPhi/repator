@@ -2,11 +2,11 @@
 
 # coding=utf-8
 from collections import OrderedDict
-from functools import partial
 from re import sub
 
-from PyQt5.QtCore import QDateTime, Qt, QDate
-from PyQt5.QtWidgets import QScrollArea, QGridLayout, QWidget, QLabel, QLineEdit, QDateEdit
+from PyQt5.QtCore import QDateTime, Qt, QDate, pyqtSignal
+from PyQt5.QtWidgets import QScrollArea, QGridLayout, QWidget, QLabel, QLineEdit, QDateEdit, QListWidgetItem, \
+    QListWidget, QDialog
 
 from conf.report import LANGUAGES
 from conf.ui_auditors import add_people
@@ -454,6 +454,34 @@ class Tab(QScrollArea):
                 self.fields["isVuln-" +
                             doc_id].setCurrentText(result[0])
 
+    def display_help_var(self):
+        message = "\
+            For the moment, the available variables are:\n\
+            \t##client##\t\t--->\tReplaced by the 'client' field\n\
+            \t##target##\t\t--->\tReplaced by the 'target' field\n\
+            \t##code##\t\t--->\tReplaced by the 'code' field\n\
+            \t##dateStart##\t\t--->\tReplaced by the 'dateStart' field\n\
+            \t##dateEnd##\t\t--->\tReplaced by the 'dateEnd' field\n\
+            \t##environment##\t--->\tReplaced by the 'environment' field\n\
+            \t##url##\t\t\t--->\tReplaced by the 'URL' field\n\
+            \t##ip##\t\t\t--->\tReplaced by the 'IP' field\n\
+            Each variable can also be matched in uppercase, lowercase and capitalized\n\
+            \t(ex: dateStart, datestart, DATESTART, Datestart)"
+        max_length_line = 0
+        for line in message.split("\n"):
+            if len(line) > max_length_line:
+                max_length_line = len(line)
+
+        popup = Popup(message, self)
+        popup.setWindowOpacity(0.9)
+        popup.setGeometry(0, 0, max_length_line * 6, (message.count("\n") + 1) * 17)
+        popup.show()
+        """listWidget = QListWidget(self)
+        for n in ["Jack", "Chris", "Joey", "Kim", "Duncan"]:
+            QListWidgetItem(n, listWidget)
+        self.setGeometry(100, 100, 100, 100)
+        self.show()"""
+
     def del_auditor(self):
         """Checks for all selected auditors and remove them from the display and the database."""
         for ident, field in self.fields.items():
@@ -522,9 +550,6 @@ class Tab(QScrollArea):
                 else:
                     getattr(widget, field["signal"]).connect(self.change_value)
 
-            if "help" in field:
-                widget.setToolTip(field["help"])
-
             if "list" in field:
                 for line in field["list"]["lines"]:
                     line_list = field["list"]["class"](line, widget)
@@ -571,7 +596,11 @@ class Tab(QScrollArea):
                 widget.setSelectionMode(field["selectionMode"])
 
             if "label" in field:
-                label = QLabel(field["label"])
+                if "help" in field:
+                    label = ClickableQLabel(field["label"])
+                    label.clicked.connect(getattr(self, field["help"]))
+                else:
+                    label = QLabel(field["label"])
                 self.grid.addWidget(label, self.row, 0)
                 self.grid.addWidget(widget, self.row, 1, 1, -1)
             elif "col" in field:
@@ -586,3 +615,23 @@ class Tab(QScrollArea):
                 self.grid.addWidget(widget, self.row, 0, 1, 2)
 
             self.row += 1
+
+class ClickableQLabel(QLabel):
+    def __init(self, parent):
+        super().__init__(parent)
+
+    clicked = pyqtSignal()
+    rightClicked = pyqtSignal()
+
+    def mousePressEvent(self, ev):
+        if ev.button() == Qt.RightButton:
+            self.rightClicked.emit()
+        else:
+            self.clicked.emit()
+
+
+class Popup(QDialog):
+    def __init__(self, name, parent=None):
+        super().__init__(parent)
+        self.name = name
+        self.label = QLabel(self.name, self)
