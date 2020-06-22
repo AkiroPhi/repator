@@ -347,10 +347,21 @@ class Tab(QScrollArea):
         """
         sender = self.sender()
         doc_id = sender.accessibleName().split("-")[1]
+
         diff = self.fields["diff-"+doc_id]
         if diff.status() != DiffStatus.DELETED and diff.status() != DiffStatus.ADDED:
             diff.deleted()
             return
+
+        # We go up the parents until we find the Vulns tab
+        while True:
+            field_name = sender.accessibleName()
+            if "vulns" in field_name:
+                break
+            if sender.parent() is None:
+                return
+            sender = sender.parent()
+        sender.close_tab(list(sender.tabs).index(doc_id))
 
         name_lst = list()
 
@@ -379,6 +390,7 @@ class Tab(QScrollArea):
         self.parse_lst(lst)
         for ident, field in lst.items():
             self.lst[ident] = field
+        self.fields["buttonScript-"+str(doc_id)].setEnabled(False)
         self.fields["categorySort"].connect_buttons(doc_id)
         self.fields["diff-"+str(doc_id)].added()
 
@@ -460,7 +472,7 @@ class Tab(QScrollArea):
             \t##ip##\t\t\t--->\tReplaced by the 'IP' field\n\
             Each variable can also be matched in uppercase, lowercase and capitalized\n\
             \t(ex: dateStart, datestart, DATESTART, Datestart)"
-        self.display_popup(message, 0.9)
+        self.display_popup("Help", message, 0.9)
 
     def display_error_test(self, result):
         """Internal method displaying a popup according to the content of result"""
@@ -473,9 +485,9 @@ class Tab(QScrollArea):
                 message += "\n\tAn error message have been found during execution : \n\n{}.".format(result[2])
             else:
                 message += "\n\tNo error message have been found during execution."
-        self.display_popup(message, 0.9)
+        self.display_popup("Warning", message, 0.9)
 
-    def display_popup(self, message, opacity, x=-1, y=-1, width=-1, height=-1):
+    def display_popup(self, title, message, opacity, x=-1, y=-1, width=-1, height=-1):
         """Displays a simple popup with message.
         The site of the popup can be chosen or calculated."""
 
@@ -484,6 +496,7 @@ class Tab(QScrollArea):
             if len(line) > max_length_line:
                 max_length_line = len(line)
         popup = Popup(message, self)
+        popup.setWindowTitle(title)
         popup.setWindowOpacity(opacity)
         popup.setGeometry(0 if x < 0 else x,
                           0 if y < 0 else y,
