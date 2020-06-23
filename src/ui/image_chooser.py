@@ -72,9 +72,6 @@ class ImagesChooser(QWidget):
 
 
 class LineChooser(QWidget):
-    creationImage = pyqtSignal(int, str, name="creationImage")
-    deletionImage = pyqtSignal(int, name="deletionImage")
-    modificationImage = pyqtSignal(int, str, str, name="modificationImage")
 
     def __init__(self, parent, index, fct_add, fct_remove):
         super().__init__(parent)
@@ -125,15 +122,14 @@ class LineChooser(QWidget):
         self.button_add.clicked.connect(self.select_file)
         self.button_del.clicked.connect(self.delete_line)
         self.label_text.text_changed.connect(lambda:
-                                             self.modificationImage.emit(self.index, self.file,
-                                                                         self.label_text.to_plain_text()))
-        self.creationImage.connect(self.parent.emit_creation)
-        self.deletionImage.connect(self.parent.emit_deletion)
-        self.modificationImage.connect(self.parent.emit_modification)
+                                             self.parent.emit_modification(self.index, self.file,
+                                                                           self.label_text.to_plain_text()))
 
     def select_file(self):
         file_name, _ = self.dialog.getOpenFileName(filter=self.extension)
         if file_name:
+            if not self.extension_is_correct(file_name):
+                return
             is_created = len(self.file) == 0
             self.file = file_name
             if len(self.label_file.text()) == 0:
@@ -142,20 +138,30 @@ class LineChooser(QWidget):
             self.enabled_line(True)
             try:
                 if is_created:
-                    self.creationImage.emit(self.index, self.file)
+                    self.parent.emit_creation(self.index, self.file)
                 else:
-                    self.modificationImage.emit(self.index, self.file, self.label_text.to_plain_text())
+                    self.parent.emit_modification(self.index, self.file, self.label_text.to_plain_text())
             except:
                 pass
 
+    def extension_is_correct(self, string):
+        if not isinstance(string, str):
+            return False
+        for ext in self.extension.split("\n"):
+            _, name = ext.split(".")
+            if string.endswith(name):
+                return True
+        return False
+
     def delete_line(self):
-        self.deletionImage.emit(self.index)
+        self.parent.emit_deletion(self.index)
         self.fct_remove(self.index)
 
     def enabled_line(self, value):
         self.label_text.setEnabled(value)
         self.history.setEnabled(value)
         self.button_del.setEnabled(value)
+
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
