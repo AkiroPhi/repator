@@ -6,6 +6,7 @@ import collections
 
 from PyQt5.QtWidgets import QLabel, QLineEdit, QComboBox
 
+from src.ui.image_chooser import ImagesChooser
 from src.ui.rich_text_edit import RichTextEdit
 
 
@@ -124,6 +125,13 @@ def vuln_editing(doc_id, vuln, lang=""):
         "signalFct": "update_vuln",
         "arg": vuln["reco"+lang].replace("\n", "<br/>") if vuln["reco"+lang] else (
             vuln["reco"].replace("\n", "<br/>"))
+    }
+    # TODO: rajouter les champs à modifier (imagesPath, imagesText et imagesHistory)
+    lst["images"+lang+"-" + str(doc_id)] = {
+        "class": ImagesChooser,
+        "label": "Images",
+        "signal": ["creationImage", "deletionImage", "modificationImage"],
+        "signalFct": ["add_image", "remove_image", "modify_image"]
     }
     lst["script"+lang+"-" + str(doc_id)] = {
         "class": QLineEdit,

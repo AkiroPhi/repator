@@ -428,6 +428,18 @@ class Tab(QScrollArea):
         for ident, field in lst.items():
             self.lst[ident] = field
 
+    def add_image(self, index, name):
+        # TODO : ajouter l'image dans la vulnérabilité
+        print("creation {} : '{}''".format(index, name))
+
+    def remove_image(self, index):
+        # TODO : retirer l'image dans la vulnérabilité
+        print("suppression {}'".format(index))
+
+    def modify_image(self, index, name, string):
+        # TODO : modifier l'image dans la vulnérabilité
+        print("modification {} : '{}'\t'{}'".format(index, name, string))
+
     def set_status_vuln(self, doc_id, dispay_popup_error=False):
         """Internal method replacing the variables from the script corresponding with the ID"""
 
@@ -563,16 +575,24 @@ class Tab(QScrollArea):
             self.fields[ident] = widget
 
             if "signal" in field:
-                if "signalFct" in field:
-                    if isinstance(field["signalFct"], list):
-                        for signal in field["signalFct"]:
-                            getattr(widget, field["signal"]).connect(
-                                getattr(self, signal))
-                    else:
-                        getattr(widget, field["signal"]).connect(
-                            getattr(self, field["signalFct"]))
+
+                # If there are several signals, we associate each signal with the
+                #   corresponding function (with same index)
+                if isinstance(field["signal"], list):
+                    for index in range(len(field["signal"])):
+                        if "signalFct" in field:
+                            self.set_signal(widget, field["signal"][index], field["signalFct"][index])
+                        else:
+                            getattr(widget, field["signal"][index]).connect(self.change_value)
                 else:
-                    getattr(widget, field["signal"]).connect(self.change_value)
+                    if "signalFct" in field:
+                        if isinstance(field["signalFct"], list):
+                            for signal in field["signalFct"]:
+                                self.set_signal(widget, field["signal"], signal)
+                        else:
+                            self.set_signal(widget, field["signal"], field["signalFct"])
+                    else:
+                        getattr(widget, field["signal"]).connect(self.change_value)
 
             if "list" in field:
                 for line in field["list"]["lines"]:
@@ -640,6 +660,10 @@ class Tab(QScrollArea):
 
             self.row += 1
 
+    def set_signal(self, widget, signal, signal_fct):
+        getattr(widget, signal).connect(getattr(self, signal_fct))
+
+
 class ClickableQLabel(QLabel):
     def __init(self, parent):
         super().__init__(parent)
@@ -663,6 +687,6 @@ class Popup(QDialog):
         self.grid.setSpacing(5)
         self.grid.setContentsMargins(10, 5, 10, 5)
         self.grid.setAlignment(Qt.AlignTop)
+        self.setLayout(self.grid)
 
         self.grid.addWidget(QLabel(self.name, self))
-        self.setLayout(self.grid)
