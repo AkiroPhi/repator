@@ -5,6 +5,7 @@ from collections import OrderedDict, defaultdict
 from re import sub
 
 from PyQt5.QtCore import QDateTime, Qt, QDate, pyqtSignal
+from PyQt5.QtGui import QPixmap
 from PyQt5.QtWidgets import QScrollArea, QGridLayout, QWidget, QLabel, QLineEdit, QDateEdit, QDialog
 
 from conf.report import LANGUAGES
@@ -727,8 +728,32 @@ class Tab(QScrollArea):
                 widget.setSelectionMode(field["selectionMode"])
 
             if "label" in field:
+
+                # Adds a symbol (or image if it's available) to warn the user that help is available
                 if "help" in field:
-                    label = ClickableQLabel(field["label"] + " (?)")
+                    label = ClickableQWidget()
+                    layout = QGridLayout(label)
+                    if "helpLogo" in field and len(field["helpLogo"]) > 0:
+                        pixmap = QPixmap(field["helpLogo"])
+                        if pixmap is not None:
+                            text_label = QLabel(field["label"])
+                            image_label = QLabel()
+
+                            image_label.setPixmap(pixmap)
+                            image_label.setAlignment(Qt.AlignCenter)
+                            text_label.setMinimumHeight(pixmap.height())
+                            text_label.setAlignment(Qt.AlignCenter)
+
+                            layout.addWidget(text_label, 0, 0)
+                            layout.addWidget(image_label, 0, 1)
+                            layout.setSpacing(0)
+                            label.setLayout(layout)
+                        else:
+                            text_label = QLabel(field["label"] + " (?)")
+                            layout.addWidget(text_label, 0, 0)
+                    else:
+                        text_label = QLabel(field["label"] + " (?)")
+                        layout.addWidget(text_label, 0, 0)
                     label.clicked.connect(getattr(self, field["help"]))
                 else:
                     label = QLabel(field["label"])
@@ -751,7 +776,7 @@ class Tab(QScrollArea):
         getattr(widget, signal).connect(getattr(self, signal_fct))
 
 
-class ClickableQLabel(QLabel):
+class ClickableQWidget(QWidget):
     def __init(self, parent):
         super().__init__(parent)
 
