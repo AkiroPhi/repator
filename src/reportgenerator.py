@@ -385,9 +385,23 @@ class Generator:
                     document, json_input["content"], template)
 
     @staticmethod
+    def __place_image(values):
+        for ident, elem in values.items():
+            imagesPath = elem["imagesPath"]
+            imagesText = elem["imagesText"]
+            for key, value in elem.items():
+                if isinstance(value, str) and \
+                        key != "imagesPath" and key != "imagesText" and key != "imagesHistory" and "History" not in key:
+                    for index in range(len(imagesText)):
+                        text_with_image = "[[IMAGE]]" + imagesPath[index] + "||3[[/IMAGE]] " + imagesText[index]
+                        values[ident][key] = values[ident][key].replace(imagesText[index], text_with_image)
+        return values
+
+    @staticmethod
     def generate_all(values, output_filename):
         """Main process of report generation."""
         template = values["Mission"]["template"]
+        values["Vulns"] = Generator.__place_image(values["Vulns"])
 
         if len(LANGUAGES) > 1:
             lang = values["Mission"]["language"]
