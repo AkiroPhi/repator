@@ -320,6 +320,19 @@ class Tab(QScrollArea):
             diff.deleted()
             return
 
+        # We go up the parents until we find the Vulns tab
+        while True:
+            field_name = sender.accessibleName()
+            if "vulns" in field_name:
+                break
+            if sender.parent() is None:
+                return
+            sender = sender.parent()
+
+        if doc_id in sender.tabs:
+            sender.close_tab(list(sender.tabs).index(doc_id))
+
+
         name_lst = list()
 
         for name in self.fields:
