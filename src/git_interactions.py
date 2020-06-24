@@ -102,7 +102,8 @@ class Git(QObject):
                 return json_db_updated != json_db_initial
         except FileNotFoundError as err:
             print(err)
-        return False
+
+            return False
 
     def timer_vulnerabilities(self):
         """Every REFRESH_RATE seconds, tries to update git."""

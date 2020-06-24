@@ -155,8 +155,6 @@ class VulnsGit(QWidget):
         bottomButton.addWidget(self.buttons["duplicateOneButton"], 0, 3)
         self.grid.itemAt(2).widget().setLayout(bottomButton)
 
-        # TODO: remove this as the corresponding features are added.
-        # self.buttons["uploadOneBtn"].setEnabled(False)
 
         self.show_buttons_all_view()
 
@@ -179,8 +177,6 @@ class VulnsGit(QWidget):
         """Shows the buttons that have to be displayed when in any tab but "All"."""
         self.grid.itemAt(1).widget().hide()
         self.grid.itemAt(2).widget().show()
-        # TODO: uncomment when uploadOneBtn is implented
-        # self.buttons["uploadOneBtn"].setEnabled(duplicate)
 
 
     def duplicate_one_vuln(self):
@@ -242,7 +238,6 @@ class VulnsGit(QWidget):
 
     def upload_one_change(self):
         """uploads changes made to local vuln database to the git repository. of one vuln"""
-        print("one change upload")
         for window in self.app.topLevelWidgets():
             if window.windowTitle() == "Repator":
                 repator = window
