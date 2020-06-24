@@ -1,7 +1,7 @@
 """Module that generates the different tab types"""
 
 # coding=utf-8
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 from re import sub
 
 from PyQt5.QtCore import QDateTime, Qt, QDate, pyqtSignal
@@ -30,6 +30,7 @@ class Tab(QScrollArea):
         self.lst = self.head_lst
         self.values = OrderedDict()
         self.valid_status_vuln = ["Vulnerable", "Not Vulnerable"]
+        self.lst_images = defaultdict(lambda: list())
 
         self.init_tab()
         self.init_buttons_status()
@@ -157,11 +158,26 @@ class Tab(QScrollArea):
                 history.append(value)
             self.database.update(int(field_tab[1]), field_tab[0], history)
 
+    def save_history_image(self, history_field_name):
+        """Writes the history into the database."""
+        field_tab = history_field_name.split('-')
+
+        history = self.database.search_by_id(
+            int(field_tab[1]))
+        images_text = history[field_tab[0] + "Text"]
+        images_history = history[field_tab[0] + "History"]
+        for index in range(len(images_text)):
+            if images_text[index] not in images_history[index]:
+                images_history[index].append(images_text[index])
+        self.database.update(int(field_tab[1]), field_tab[0] + "History", images_history)
+
     def save_histories(self):
         """Writes all histories into the database."""
         for name in self.fields:
             if name.find("History-") > 0:
                 self.save_history(name)
+            if "images-" in name:
+                self.save_history_image(name)
 
     def update_history(self, index):
         """Calls the parent function that updates the History field."""
@@ -348,7 +364,7 @@ class Tab(QScrollArea):
         sender = self.sender()
         doc_id = sender.accessibleName().split("-")[1]
 
-        diff = self.fields["diff-"+doc_id]
+        diff = self.fields["diff-" + doc_id]
         if diff.status() != DiffStatus.DELETED and diff.status() != DiffStatus.ADDED:
             diff.deleted()
             return
@@ -392,9 +408,9 @@ class Tab(QScrollArea):
         self.parse_lst(lst)
         for ident, field in lst.items():
             self.lst[ident] = field
-        self.fields["buttonScript-"+str(doc_id)].setEnabled(False)
+        self.fields["buttonScript-" + str(doc_id)].setEnabled(False)
         self.fields["categorySort"].connect_buttons(doc_id)
-        self.fields["diff-"+str(doc_id)].added()
+        self.fields["diff-" + str(doc_id)].added()
 
     def status_vuln(self):
         """Calculates the status of the selected vulnerability.
@@ -429,16 +445,77 @@ class Tab(QScrollArea):
             self.lst[ident] = field
 
     def add_image(self, index, name):
-        # TODO : ajouter l'image dans la vulnérabilité
-        print("creation {} : '{}''".format(index, name))
+        sender = self.sender()
+        while True:
+            field_name = sender.accessibleName()
+            if field_name:
+                break
+            if sender.parent() is None:
+                return
+            sender = sender.parent()
+
+        field_tab = field_name.split('-')
+        doc = self.database.search_by_id(int(field_tab[1]))
+
+        path_name = field_tab[0] + "Path"
+        text_name = field_tab[0] + "Text"
+        history_name = field_tab[0] + "History"
+        doc[path_name] += [name]
+        doc[text_name] += [""]
+        doc[history_name] += [[""]]
+
+        self.lst_images[field_tab[1]] += [index]
+        self.database.update(int(field_tab[1]), path_name, doc[path_name])
+        self.database.update(int(field_tab[1]), text_name, doc[text_name])
+        self.database.update(int(field_tab[1]), history_name, doc[history_name])
 
     def remove_image(self, index):
-        # TODO : retirer l'image dans la vulnérabilité
-        print("suppression {}'".format(index))
+        sender = self.sender()
+        while True:
+            field_name = sender.accessibleName()
+            if field_name:
+                break
+            if sender.parent() is None:
+                return
+            sender = sender.parent()
+
+        field_tab = field_name.split('-')
+        index_images = list(self.lst_images[field_tab[1]]).index(index)
+        doc = self.database.search_by_id(int(field_tab[1]))
+
+        path_name = field_tab[0] + "Path"
+        text_name = field_tab[0] + "Text"
+        history_name = field_tab[0] + "History"
+        del doc[path_name][index_images]
+        del doc[text_name][index_images]
+        del doc[history_name][index_images]
+
+        del self.lst_images[field_tab[1]][index_images]
+        self.database.update(int(field_tab[1]), path_name, doc[path_name])
+        self.database.update(int(field_tab[1]), text_name, doc[text_name])
+        self.database.update(int(field_tab[1]), history_name, doc[history_name])
 
     def modify_image(self, index, name, string):
-        # TODO : modifier l'image dans la vulnérabilité
-        print("modification {} : '{}'\t'{}'".format(index, name, string))
+        sender = self.sender()
+        while True:
+            field_name = sender.accessibleName()
+            if field_name:
+                break
+            if sender.parent() is None:
+                return
+            sender = sender.parent()
+
+        field_tab = field_name.split('-')
+        index_images = list(self.lst_images[field_tab[1]]).index(index)
+        doc = self.database.search_by_id(int(field_tab[1]))
+
+        path_name = field_tab[0] + "Path"
+        text_name = field_tab[0] + "Text"
+        doc[path_name][index_images] = name
+        doc[text_name][index_images] = string
+
+        self.database.update(int(field_tab[1]), path_name, doc[path_name])
+        self.database.update(int(field_tab[1]), text_name, doc[text_name])
 
     def set_status_vuln(self, doc_id, dispay_popup_error=False):
         """Internal method replacing the variables from the script corresponding with the ID"""
@@ -463,7 +540,7 @@ class Tab(QScrollArea):
 
             # Calculate the status and display a popup if necessary
             result = status_vuln(script, (vuln["regexVuln"], vuln["regexNotVuln"]))
-            if result is not None and result[0] in self.valid_status_vuln\
+            if result is not None and result[0] in self.valid_status_vuln \
                     and "isVuln-" + doc_id in self.fields:
                 self.fields["isVuln-" +
                             doc_id].setCurrentText(result[0])
@@ -561,13 +638,23 @@ class Tab(QScrollArea):
 
         for ident, field in lst.items():
             if "args" in field:
-                widget = field["class"](*(field["args"]+[self]))
+                widget = field["class"](*(field["args"] + [self]))
             elif "arg" in field:
-                widget = field["class"](field["arg"], self)
-                try:
-                    getattr(widget, field["class"]).emit(field["arg"])
-                except (TypeError, AttributeError):
-                    pass
+                if "images" in ident:
+                    widget = field["class"](self)
+                    doc_id = ident.split("-")[1]
+                    doc = self.database.search_by_id(int(doc_id))
+                    for index in range(len(doc["imagesText"])):
+                        self.lst_images[doc_id] += [index]
+                        widget.add_chooser(
+                            doc["imagesPath"][index], doc["imagesText"][index], doc["imagesHistory"][index])
+                    widget.add_chooser()
+                else:
+                    widget = field["class"](field["arg"], self)
+                    try:
+                        getattr(widget, field["class"]).emit(field["arg"])
+                    except (TypeError, AttributeError):
+                        pass
             else:
                 widget = field["class"](self)
 

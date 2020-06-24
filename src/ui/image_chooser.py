@@ -22,7 +22,6 @@ class ImagesChooser(QWidget):
         self.row = 0
         self.index = 0
         self.init_tab()
-        self.add_chooser()
 
     def init_tab(self):
         """Initializes features and widgets of a tab."""
@@ -39,17 +38,25 @@ class ImagesChooser(QWidget):
         self.grid.addWidget(chooser)
         self.index += 1
         self.row += 1
-
-        # TODO: modifier la ligne quand les champs sont not None
-
         if filename is not None:
-            print(filename)
+            chooser.set_file(filename)
 
         if text is not None:
-            print(text)
+            chooser.set_text(text)
 
         if history is not None:
-            print(history)
+            chooser.set_history(history)
+
+    def mod_chooser(self, index, filename=None, text=None, history=None):
+        chooser = self.lst[index]
+        if filename is not None:
+            chooser.set_file(filename)
+
+        if text is not None:
+            chooser.set_text(text)
+
+        if history is not None:
+            chooser.set_history(history)
 
     def del_chooser(self, index):
         self.grid.removeWidget(self.lst[index])
@@ -124,6 +131,8 @@ class LineChooser(QWidget):
         self.label_text.text_changed.connect(lambda:
                                              self.parent.emit_modification(self.index, self.file,
                                                                            self.label_text.to_plain_text()))
+        self.history.currentIndexChanged.connect(lambda:
+                                                 self.set_text(self.history.currentText()))
 
     def select_file(self):
         file_name, _ = self.dialog.getOpenFileName(filter=self.extension)
@@ -162,9 +171,13 @@ class LineChooser(QWidget):
         self.history.setEnabled(value)
         self.button_del.setEnabled(value)
 
+    def set_file(self, string):
+        self.file = string
+        self.label_file.setText(self.file)
+        self.enabled_line(True)
 
-if __name__ == '__main__':
-    app = QApplication(sys.argv)
-    window = ImagesChooser()
-    window.show()
-    sys.exit(app.exec_())
+    def set_text(self, string):
+        self.label_text.set_plain_text(string)
+
+    def set_history(self, history):
+        self.history.addItems(history)

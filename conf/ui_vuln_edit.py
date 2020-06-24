@@ -131,7 +131,10 @@ def vuln_editing(doc_id, vuln, lang=""):
         "class": ImagesChooser,
         "label": "Images",
         "signal": ["creationImage", "deletionImage", "modificationImage"],
-        "signalFct": ["add_image", "remove_image", "modify_image"]
+        "signalFct": ["add_image", "remove_image", "modify_image"],
+        "arg": [vuln["imagesPath"+lang] if vuln["imagesPath"+lang] else vuln["imagesPath"],
+                vuln["imagesText"+lang] if vuln["imagesText"+lang] else vuln["imagesText"],
+                vuln["imagesHistory"+lang] if vuln["imagesHistory"+lang] else vuln["imagesHistory"]]
     }
     lst["script"+lang+"-" + str(doc_id)] = {
         "class": QLineEdit,

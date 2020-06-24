@@ -76,7 +76,10 @@ class DBHandler:
                 if isinstance(dictionary[k], str):
                     dictionary[k] = ""
                 elif isinstance(dictionary[k], list):
-                    dictionary[k] = [""]
+                    if len(dictionary[k]) > 0:
+                        dictionary[k] = [""]
+                    else:
+                        dictionary[k] = []
         return self.database.insert(dictionary)
 
     def insert_multiple(self, dictionary):
