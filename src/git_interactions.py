@@ -31,19 +31,6 @@ class Git(QObject):
             target=self.git_update, daemon=True)
         self.git_routine()
 
-    # @staticmethod
-    # def execute_command(arg, cwd="."):
-    #     """Executes the command arg in a subprocess with the option of setting the cwd."""
-    #     process = Popen(arg, shell=True, cwd=cwd, stdout=PIPE, stderr=PIPE)
-    #     res = process.communicate()
-    #     for line in res:
-    #         if line:
-    #             result = line.decode('utf-8')
-    #             err = findall("[eE][rR][rR][oO][rR]", result)
-    #             fat = findall("fatal", result)
-    #             if err or fat:
-    #                 raise RuntimeError(result)
-
     def init_git(self):
         """Initialises the git repository in a new directory."""
         self.clean_git()
@@ -79,8 +66,8 @@ class Git(QObject):
         return False
 
     def git_update(self):
-        """Pulls git repo and colors View changes button if the repository is unreachable."""
-        repator, diffs = None, None
+        """Pulls git repo and colors View changes button if the repository is unreachable. and return True if the repo has been updated."""
+        repator, diffs, ret_value = None, None, False
         for window in self.app.topLevelWidgets():
             if window.windowTitle() == "Repator":
                 repator = window
@@ -90,30 +77,32 @@ class Git(QObject):
             self.repo.remote().pull('master')
             self.git_reachable = True
 
+            if Git.git_changed():
+                copyfile(DB_VULNS_GIT_UPDATED, DB_VULNS_GIT)
+                ret_value = True
+                if diffs and diffs.isVisible():
+                    refresh_button = diffs.layout().itemAt(0).widget().widget(0).widget.layout().itemAt(3).widget()
+                    refresh_button.setStyleSheet("QPushButton { background-color : red }")
         except GitCommandError as err:
             print(err)
             self.git_reachable = False
 
-        if Git.git_changed():
-            copyfile(DB_VULNS_GIT_UPDATED, DB_VULNS_GIT)
-            if diffs and diffs.isVisible():
-                refresh_button = diffs.layout().itemAt(0).widget().widget(0).widget.layout().itemAt(3).widget()
-                refresh_button.setStyleSheet("QPushButton { background-color : red }")
         self.update_changes_button_colors(repator, diffs)
+        return ret_value
 
 
     @staticmethod
     def git_changed():
         """Compares DB_VULNS_GIT_UPDATED and DB_VULNS_GIT"""
-        #TODO: change with self.repo.is_dirty() ??
-        if DB_VULNS_GIT_UPDATED:
-            json_db_initial = json.loads(
-                open(DB_VULNS_GIT, 'r').read())["_default"]
-            json_db_updated = json.loads(open(DB_VULNS_GIT_UPDATED, 'r').read())["_default"]
-            return json_db_updated != json_db_initial
-
-        else:
-            return False
+        try:
+            if DB_VULNS_GIT_UPDATED:
+                json_db_initial = json.loads(
+                    open(DB_VULNS_GIT, 'r').read())["_default"]
+                json_db_updated = json.loads(open(DB_VULNS_GIT_UPDATED, 'r').read())["_default"]
+                return json_db_updated != json_db_initial
+        except FileNotFoundError as err:
+            print(err)
+        return False
 
     def timer_vulnerabilities(self):
         """Every REFRESH_RATE seconds, tries to update git."""

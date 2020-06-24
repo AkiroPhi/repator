@@ -9,7 +9,7 @@ from copy import copy
 from PyQt5.QtGui import QColor
 from PyQt5.QtCore import Qt, QCoreApplication
 from PyQt5.QtWidgets import (QWidget, QTabWidget, QGridLayout, QTabBar,
-                             QPushButton, QLabel, QComboBox, QHBoxLayout)
+                             QPushButton, QLabel, QComboBox, QHBoxLayout, QMessageBox)
 
 from conf.ui_vuln_changes import vuln_changes
 from conf.ui_vulns_initial import VULNS_INITIAL
@@ -121,8 +121,7 @@ class VulnsGit(QWidget):
         self.buttons["hideBtn"] = GitButton("Hide changes", "hide", self)
         self.buttons["patchBtn"] = GitButton("Patch", "patch", self)
 
-        self.buttons["hideOneBtn"] = QPushButton(
-            "Hide changes for this vuln")
+        self.buttons["hideOneBtn"] = QPushButton("Hide changes for this vuln")
         self.buttons["patchOneBtn"] = QPushButton("Patch this vuln")
         self.buttons["duplicateOneButton"] = QPushButton("Duplicate this vuln")
         self.buttons["uploadOneBtn"] = QPushButton("Upload this vuln")
@@ -133,7 +132,7 @@ class VulnsGit(QWidget):
         self.buttons["hideOneBtn"].clicked.connect(self.hide_one_change)
         self.buttons["patchOneBtn"].clicked.connect(self.patch_one_change)
         self.buttons["duplicateOneButton"].clicked.connect(self.duplicate_one_vuln)
-
+        self.buttons["uploadOneBtn"].clicked.connect(self.upload_one_change)
         self.grid.addWidget(QWidget(), 1, 0)
         self.grid.addWidget(QWidget(), 1 ,0)
 
@@ -157,7 +156,7 @@ class VulnsGit(QWidget):
         self.grid.itemAt(2).widget().setLayout(bottomButton)
 
         # TODO: remove this as the corresponding features are added.
-        self.buttons["uploadOneBtn"].setEnabled(False)
+        # self.buttons["uploadOneBtn"].setEnabled(False)
 
         self.show_buttons_all_view()
 
@@ -180,6 +179,8 @@ class VulnsGit(QWidget):
         """Shows the buttons that have to be displayed when in any tab but "All"."""
         self.grid.itemAt(1).widget().hide()
         self.grid.itemAt(2).widget().show()
+        # TODO: uncomment when uploadOneBtn is implented
+        # self.buttons["uploadOneBtn"].setEnabled(duplicate)
 
 
     def duplicate_one_vuln(self):
@@ -203,21 +204,18 @@ class VulnsGit(QWidget):
 
     def upload_changes(self, checked):
         """uploads changes made to local vuln database to the git repository."""
-        # TODO:
-        # Uploads the changes made to local database vulnerabilities to the
-        # remote git repository.
-        # => Need une fonction qui va vérifier la cohérence des bases de
-        # données.
 
         # first pull the repo -->
         # if changed --> warning + window
-        # else commit and push --> self.git.git_upload()
-        # if self.git.git_update():
-        #     self.refresh_tab_widget()
-        #     WarningWindow = QMessageBox()
-        #     WarningWindow.setText("Please update, the file just has been updated")
-        #     WarningWindow.exec()
-        #     return
+        refresh_button = self.layout().itemAt(0).widget().widget(0).widget.layout().itemAt(3).widget()
+        if self.git.git_update() or refresh_button.styleSheet() == "QPushButton { background-color : red }":
+            self.refresh_tab_widget()
+            WarningWindow = QMessageBox()
+            WarningWindow.setText("Please retry, the file just has been updated and\nthe window refresh")
+            WarningWindow.exec()
+            return
+
+        # else write the file
         for ident in checked:
             if self.style[ident] == GREEN: # if the style is green, it's mean that the vuln is present in the git db and not in the local db
                 del self.json_db_git[ident]
@@ -231,11 +229,55 @@ class VulnsGit(QWidget):
             with open(DB_VULNS_GIT_UPDATED, 'w') as output:
                 output.write(jsondb)
 
+            # and commit and push --> self.git.git_upload()
             self.git.git_upload()
+
         # To also update repator window
         for window in self.app.topLevelWidgets():
             if window.windowTitle() == "Repator":
                 repator = window
+        self.refresh_repator(repator)
+        self.update_diffs()
+        self.refresh_tab_widget()
+
+    def upload_one_change(self):
+        """uploads changes made to local vuln database to the git repository. of one vuln"""
+        print("one change upload")
+        for window in self.app.topLevelWidgets():
+            if window.windowTitle() == "Repator":
+                repator = window
+
+        refresh_button = self.layout().itemAt(0).widget().widget(0).widget.layout().itemAt(3).widget()
+        git_label = repator.layout().itemAt(5).widget()
+        if self.git.git_update() or refresh_button.styleSheet() == "QPushButton { background-color : red }":
+            self.refresh_tab_widget()
+            WarningWindow = QMessageBox()
+            WarningWindow.setText("Please retry, the file just has been updated and\nthe window refresh")
+            WarningWindow.exec()
+            return
+        if git_label.styleSheet() == "QPushButton { background-color : red }":
+            WarningWindow = QMessageBox()
+            WarningWindow.setText("Could not copnnect to the git repo\nPlease check your Internet connection or the connection to the repo.")
+            WarningWindow.exec()
+            return
+
+        index = self.tabw.currentIndex()
+        ident = self.tabw.tabText(index)
+        if self.style[ident] == GREEN: # if the style is green, it's mean that the vuln is present in the git db and not in the local db
+            del self.json_db_git[ident]
+        else:
+            self.json_db_git[ident] = self.json_db[ident]
+        jsondb = "{\"_default\":" + \
+            json.dumps({int(x): self.json_db_git[x]
+                        for x in self.json_db_git.keys()}, sort_keys=True) + "}"
+        with open(DB_VULNS_GIT, 'w') as output:
+            output.write(jsondb)
+        with open(DB_VULNS_GIT_UPDATED, 'w') as output:
+            output.write(jsondb)
+
+        self.git.git_upload()
+
+        # To also update repator window
         self.refresh_repator(repator)
         self.update_diffs()
         self.refresh_tab_widget()
@@ -284,6 +326,7 @@ class VulnsGit(QWidget):
         """Applies remote changes to local vuln database."""
         index = self.tabw.currentIndex()
         ident = self.tabw.tabText(index)
+
         if self.style[ident] == RED:
             del self.json_db[ident]
         else:
@@ -291,8 +334,6 @@ class VulnsGit(QWidget):
         jsondb = "{\"_default\":" + \
             json.dumps({int(x): self.json_db[x]
                         for x in self.json_db.keys()}, sort_keys=True) + "}"
-        with open(DB_VULNS, 'w') as output:
-            output.write(jsondb)
         with open(DB_VULNS, 'w') as output:
             output.write(jsondb)
         # To also update repator window
