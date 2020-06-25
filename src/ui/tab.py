@@ -581,7 +581,7 @@ class Tab(QScrollArea):
 
     def display_popup(self, title, message, opacity, x=-1, y=-1, width=-1, height=-1):
         """Displays a simple popup with message.
-        The site of the popup can be chosen or calculated."""
+        The size of the popup can be chosen or calculated."""
 
         max_length_line = 0
         for line in message.split("\n"):
@@ -733,6 +733,7 @@ class Tab(QScrollArea):
                 if "help" in field:
                     label = ClickableQWidget()
                     layout = QGridLayout(label)
+                    layout.setContentsMargins(0, 0, 0, 0)
                     if "helpLogo" in field and len(field["helpLogo"]) > 0:
                         pixmap = QPixmap(field["helpLogo"])
                         if pixmap is not None:
@@ -744,16 +745,16 @@ class Tab(QScrollArea):
                             text_label.setMinimumHeight(pixmap.height())
                             text_label.setAlignment(Qt.AlignCenter)
 
-                            layout.addWidget(text_label, 0, 0)
-                            layout.addWidget(image_label, 0, 1)
+                            layout.addWidget(text_label, 0, 0, alignment=Qt.AlignLeft)
+                            layout.addWidget(image_label, 0, 1, alignment=Qt.AlignLeft)
                             layout.setSpacing(0)
                             label.setLayout(layout)
                         else:
                             text_label = QLabel(field["label"] + " (?)")
-                            layout.addWidget(text_label, 0, 0)
+                            layout.addWidget(text_label, 0, 0, alignment=Qt.AlignLeft)
                     else:
                         text_label = QLabel(field["label"] + " (?)")
-                        layout.addWidget(text_label, 0, 0)
+                        layout.addWidget(text_label, 0, 0, alignment=Qt.AlignLeft)
                     label.clicked.connect(getattr(self, field["help"]))
                 else:
                     label = QLabel(field["label"])
