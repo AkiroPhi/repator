@@ -1,10 +1,9 @@
 """Interface for files chooser."""
 
 # coding=utf-8
-import sys
 
 from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtWidgets import QWidget, QApplication, QPushButton, QFileDialog, QGridLayout, QLabel, \
+from PyQt5.QtWidgets import QWidget, QPushButton, QFileDialog, QGridLayout, QLabel, \
     QComboBox, QScrollArea
 
 from src.ui.rich_text_edit import RichTextEdit
@@ -19,6 +18,7 @@ class ImagesChooser(QWidget):
         super().__init__(parent)
         self.parent = parent
         self.lst = {}
+        self.history = []
         self.row = 0
         self.index = 0
         self.init_tab()
@@ -41,22 +41,24 @@ class ImagesChooser(QWidget):
         if filename is not None:
             chooser.set_file(filename)
 
+        if history is not None:
+            self.history += [elem for elem in history if (not self.history.count(elem) > 0)]
+            chooser.set_history(history)
+
         if text is not None:
             chooser.set_text(text)
-
-        if history is not None:
-            chooser.set_history(history)
 
     def mod_chooser(self, index, filename=None, text=None, history=None):
         chooser = self.lst[index]
         if filename is not None:
             chooser.set_file(filename)
 
+        if history is not None:
+            self.history += [elem for elem in history if (not self.history.count(elem) > 0)]
+            chooser.set_history(history)
+
         if text is not None:
             chooser.set_text(text)
-
-        if history is not None:
-            chooser.set_history(history)
 
     def del_chooser(self, index):
         self.grid.removeWidget(self.lst[index])
@@ -67,6 +69,12 @@ class ImagesChooser(QWidget):
         if self.row == 0:
             self.add_chooser()
             self.row = 1
+
+    def get_history(self):
+        return self.history
+
+    def set_history(self, history):
+        self.history = history
 
     def emit_creation(self, index, file):
         self.creationImage.emit(index, file)
@@ -131,18 +139,17 @@ class LineChooser(QWidget):
         self.label_text.text_changed.connect(lambda:
                                              self.parent.emit_modification(self.index, self.file,
                                                                            self.label_text.to_plain_text()))
-        self.history.currentIndexChanged.connect(lambda:
-                                                 self.set_text(self.history.currentText()))
 
     def select_file(self):
         file_name, _ = self.dialog.getOpenFileName(filter=self.extension)
         if file_name:
             if not self.extension_is_correct(file_name):
                 return
+            self.history.addItems(self.parent.get_history())
             is_created = len(self.file) == 0
             self.file = file_name
             if len(self.label_file.text()) == 0:
-                self.fct_add()
+                self.fct_add(history=[self.history.itemText(i) for i in range(self.history.count())])
             self.label_file.setText(self.file)
             self.enabled_line(True)
             try:
@@ -167,6 +174,9 @@ class LineChooser(QWidget):
         self.fct_remove(self.index)
 
     def enabled_line(self, value):
+        if value:
+            self.history.currentIndexChanged.connect(lambda:
+                                                     self.set_text(self.history.currentText()))
         self.label_text.setEnabled(value)
         self.history.setEnabled(value)
         self.button_del.setEnabled(value)
@@ -178,6 +188,8 @@ class LineChooser(QWidget):
 
     def set_text(self, string):
         self.label_text.set_plain_text(string)
+        if self.history.findText(string) != -1:
+            self.history.setCurrentIndex(self.history.findText(string))
 
     def set_history(self, history):
-        self.history.addItems(history)
+        self.history.addItems([elem for elem in history if self.history.findText(elem) == -1])

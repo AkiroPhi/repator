@@ -168,8 +168,8 @@ class Tab(QScrollArea):
         images_text = history[field_tab[0] + "Text"]
         images_history = history[field_tab[0] + "History"]
         for index in range(len(images_text)):
-            if images_text[index] not in images_history[index]:
-                images_history[index].append(images_text[index])
+            if images_text[index] not in images_history:
+                images_history.append(images_text[index])
         self.database.update(int(field_tab[1]), field_tab[0] + "History", images_history)
 
     def save_histories(self):
@@ -460,15 +460,12 @@ class Tab(QScrollArea):
 
         path_name = field_tab[0] + "Path"
         text_name = field_tab[0] + "Text"
-        history_name = field_tab[0] + "History"
         doc[path_name] += [name]
         doc[text_name] += [""]
-        doc[history_name] += [[""]]
 
         self.lst_images[field_tab[1]] += [index]
         self.database.update(int(field_tab[1]), path_name, doc[path_name])
         self.database.update(int(field_tab[1]), text_name, doc[text_name])
-        self.database.update(int(field_tab[1]), history_name, doc[history_name])
 
     def remove_image(self, index):
         sender = self.sender()
@@ -486,15 +483,12 @@ class Tab(QScrollArea):
 
         path_name = field_tab[0] + "Path"
         text_name = field_tab[0] + "Text"
-        history_name = field_tab[0] + "History"
         del doc[path_name][index_images]
         del doc[text_name][index_images]
-        del doc[history_name][index_images]
 
         del self.lst_images[field_tab[1]][index_images]
         self.database.update(int(field_tab[1]), path_name, doc[path_name])
         self.database.update(int(field_tab[1]), text_name, doc[text_name])
-        self.database.update(int(field_tab[1]), history_name, doc[history_name])
 
     def modify_image(self, index, name, string):
         sender = self.sender()
@@ -648,7 +642,8 @@ class Tab(QScrollArea):
                     for index in range(len(doc["imagesText"])):
                         self.lst_images[doc_id] += [index]
                         widget.add_chooser(
-                            doc["imagesPath"][index], doc["imagesText"][index], doc["imagesHistory"][index])
+                            doc["imagesPath"][index], doc["imagesText"][index], doc["imagesHistory"])
+                    widget.set_history(doc["imagesHistory"])
                     widget.add_chooser()
                 else:
                     widget = field["class"](field["arg"], self)

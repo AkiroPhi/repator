@@ -32,7 +32,12 @@
         "New Risk"
       ],
       "script": "",
-      "sub_category": ""
+      "sub_category": "",
+      "imagesPath": [],
+      "imagesText": [],
+      "imagesHistory": [
+        "New comments"
+      ]
     },
     "2": {
       "A": "High",
@@ -40,7 +45,7 @@
       "AV": "Physical",
       "C": "High",
       "I": "High",
-      "PR": "None",
+      "PR": "High",
       "S": "Changed",
       "Script": "",
       "UI": "None",
@@ -53,7 +58,8 @@
         "New Observation",
         "Some user supplied inputs are inefficiently filtered and can be used to execute some SQL code.",
         "Some user supplied inputs are inefficiently filtered and can be used to execute some SQL code. ",
-        "Some user supplied inputs are inefficiently filtered and can be used to execute some SQL code.e"
+        "Some user supplied inputs are inefficiently filtered and can be used to execute some SQL code.e",
+        "Some user supplied inputs are inefficiently filtered and can be used to execute some SQL code.\n[[U]]salut[[/U]]"
       ],
       "observPos": "User inputs are well filtered before being included into SQL requests.",
       "observPosHistory": [
@@ -74,7 +80,12 @@
         "SQL injection may be used by malicious peoples to read all the content of your database.\nDepending on the database configuration and on the injected SQL query, SQL injections are often allowing database writing.\nIn some case SQL injection may also lead to server side code execution."
       ],
       "script": "ls -l",
-      "sub_category": "User input validation"
+      "sub_category": "User input validation",
+      "imagesPath": [],
+      "imagesText": [],
+      "imagesHistory": [
+        "New comments"
+      ]
     },
     "3": {
       "A": "High",
@@ -90,7 +101,7 @@
       "labelNeg": "Some user supplied inputs are vulnerable to Cross-Site-Scripting (XSS)",
       "labelPos": "No user supplied inputs are vulnerable to Cross-Site-Scripting (XSS)",
       "name": "XSS",
-      "observNeg": "Some user supplied inputs are inefficiently filtered and can be used to inject some client-side executable code into web pages. ",
+      "observNeg": "Some user supplied inputs are inefficiently filtered and can be used to inject some client-side executable code into web pages.",
       "observNegHistory": [
         "New Observation",
         "Some user supplied inputs are inefficiently filtered and can be used to inject some client-side executable code into web pages.",
@@ -114,33 +125,12 @@
         "XSS may be used by malicious peoples to have some client-side code execution.\\nThis code execution can be used for example to steal user's session, to steal user's sensitives data or to perform some actions using his authorizations."
       ],
       "script": "ls -l",
-      "sub_category": "User input validation"
-    },
-    "5": {
-      "A": "None",
-      "AC": "Low",
-      "AV": "Network",
-      "C": "None",
-      "I": "None",
-      "PR": "None",
-      "S": "Unchanged",
-      "UI": "None",
-      "category": "",
-      "labelNeg": "",
-      "labelPos": "",
-      "name": "",
-      "observNeg": "\n",
-      "observNegHistory": "",
-      "observPos": "",
-      "observPosHistory": "",
-      "reco": "",
-      "recoHistory": "",
-      "regexNotVuln": "",
-      "regexVuln": "",
-      "risk": "",
-      "riskHistory": "",
-      "script": "ea",
-      "sub_category": ""
+      "sub_category": "User input validation",
+      "imagesPath": [],
+      "imagesText": [],
+      "imagesHistory": [
+        "New comments"
+      ]
     }
   }
 }
