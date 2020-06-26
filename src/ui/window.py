@@ -1,7 +1,7 @@
 """Main repator window creator."""
 
 # coding=utf-8
-
+from collections import OrderedDict
 from copy import copy
 
 from PyQt5.QtWidgets import QWidget, QTabWidget, QPushButton, QGridLayout, QFileDialog
@@ -100,6 +100,19 @@ class Window(QWidget):
         values = {}
         for tabname, tab in self.tabs.items():
             values[tabname] = tab.save(database=False)
+
+        # Adding images in values to generation
+        for idents, elem in self.tabs["Vulns"].lst["vulns"]["arg"][0].items():
+            field = idents.split("-")
+            if "imagesPath" in field[0]:
+                values["Vulns"][field[1]]["imagesPath"] = elem
+
+            if "imagesText" in field[0]:
+                values["Vulns"][field[1]]["imagesText"] = elem
+
+            if "imagesHistory" in field[0]:
+                values["Vulns"][field[1]]["imagesHistory"] = elem
+
         output_filename = QFileDialog.getSaveFileName(
             self, "Generate Report", "output.docx",
             "Microsoft Document [*.docx] (*.docx);;All files [*] (*)")[0]

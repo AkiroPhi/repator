@@ -61,8 +61,8 @@ class Generator:
     def __sub_dict(dic, text):
         if "##images##" in text:
             text_images = ""
-            imagesPath = dic["imagesPath"]
-            imagesText = dic["imagesText"]
+            imagesPath = dic["imagesPath"]["value"]
+            imagesText = dic["imagesText"]["value"]
             for index in range(len(imagesText)):
                 text_with_image = \
                     "[[IMAGE]]" + imagesPath[index] + "||3[[/IMAGE]]\n" + imagesText[index]
