@@ -101,5 +101,4 @@ class Vulns(QWidget):
                 elem["imagesPath"] = self.tabs["All"].lst["imagesPath-"+id]
                 elem["imagesText"] = self.tabs["All"].lst["imagesText-"+id]
                 elem["imagesHistory"] = self.tabs["All"].lst["imagesHistory-"+id]
-        print("save from vuln : {}".format(db))
         return db
