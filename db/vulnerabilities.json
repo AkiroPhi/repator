@@ -32,12 +32,7 @@
         "New Risk"
       ],
       "script": "",
-      "sub_category": "",
-      "imagesPath": [],
-      "imagesText": [],
-      "imagesHistory": [
-        "New comments"
-      ]
+      "sub_category": ""
     },
     "2": {
       "A": "High",
@@ -80,12 +75,7 @@
         "SQL injection may be used by malicious peoples to read all the content of your database.\nDepending on the database configuration and on the injected SQL query, SQL injections are often allowing database writing.\nIn some case SQL injection may also lead to server side code execution."
       ],
       "script": "ls -l",
-      "sub_category": "User input validation",
-      "imagesPath": [],
-      "imagesText": [],
-      "imagesHistory": [
-        "New comments"
-      ]
+      "sub_category": "User input validation"
     },
     "3": {
       "A": "High",
@@ -125,12 +115,7 @@
         "XSS may be used by malicious peoples to have some client-side code execution.\\nThis code execution can be used for example to steal user's session, to steal user's sensitives data or to perform some actions using his authorizations."
       ],
       "script": "ls -l",
-      "sub_category": "User input validation",
-      "imagesPath": [],
-      "imagesText": [],
-      "imagesHistory": [
-        "New comments"
-      ]
+      "sub_category": "User input validation"
     }
   }
 }

@@ -91,3 +91,12 @@ def add_vuln(lst, doc_id, vuln):
                                     "clicked": "del_vuln",
                                     "arg": "Delete",
                                     "col": 8}
+    lst["imagesPath-" + str(doc_id)] = {
+        "value": []
+    }
+    lst["imagesText-" + str(doc_id)] = {
+        "value": []
+    }
+    lst["imagesHistory-" + str(doc_id)] = {
+        "value": []
+    }

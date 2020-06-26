@@ -126,15 +126,11 @@ def vuln_editing(doc_id, vuln, lang=""):
         "arg": vuln["reco"+lang].replace("\n", "<br/>") if vuln["reco"+lang] else (
             vuln["reco"].replace("\n", "<br/>"))
     }
-    # TODO: rajouter les champs à modifier (imagesPath, imagesText et imagesHistory)
     lst["images"+lang+"-" + str(doc_id)] = {
         "class": ImagesChooser,
         "label": "Images",
         "signal": ["creationImage", "deletionImage", "modificationImage"],
-        "signalFct": ["add_image", "remove_image", "modify_image"],
-        "arg": [vuln["imagesPath"+lang] if vuln["imagesPath"+lang] else vuln["imagesPath"],
-                vuln["imagesText"+lang] if vuln["imagesText"+lang] else vuln["imagesText"],
-                vuln["imagesHistory"+lang] if vuln["imagesHistory"+lang] else vuln["imagesHistory"]]
+        "signalFct": ["add_image", "remove_image", "modify_image"]
     }
     lst["script"+lang+"-" + str(doc_id)] = {
         "class": QLineEdit,

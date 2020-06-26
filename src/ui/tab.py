@@ -161,16 +161,23 @@ class Tab(QScrollArea):
 
     def save_history_image(self, history_field_name):
         """Writes the history into the database."""
+        sender = self.parent()
+        while True:
+            field_name = sender.accessibleName()
+            if "vulns" in field_name:
+                break
+            if sender.parent() is None:
+                return
+            sender = sender.parent()
+
+        tab_all = sender.tabs["All"]
         field_tab = history_field_name.split('-')
 
-        history = self.database.search_by_id(
-            int(field_tab[1]))
-        images_text = history[field_tab[0] + "Text"]
-        images_history = history[field_tab[0] + "History"]
+        images_text = tab_all.lst[field_tab[0] + "Text-" + field_tab[1]]["value"]
+        images_history = tab_all.lst[field_tab[0] + "History-" + field_tab[1]]["value"]
         for index in range(len(images_text)):
             if images_text[index] not in images_history:
                 images_history.append(images_text[index])
-        self.database.update(int(field_tab[1]), field_tab[0] + "History", images_history)
 
     def save_histories(self):
         """Writes all histories into the database."""
@@ -446,71 +453,63 @@ class Tab(QScrollArea):
             self.lst[ident] = field
 
     def add_image(self, index, name):
-        sender = self.sender()
+        sender = self.parent()
         while True:
             field_name = sender.accessibleName()
-            if field_name:
+            if "vulns" in field_name:
                 break
             if sender.parent() is None:
                 return
             sender = sender.parent()
 
-        field_tab = field_name.split('-')
-        doc = self.database.search_by_id(int(field_tab[1]))
-
-        path_name = field_tab[0] + "Path"
-        text_name = field_tab[0] + "Text"
-        doc[path_name] += [name]
-        doc[text_name] += [""]
-
+        tab_all = sender.tabs["All"]
+        field_tab = self.sender().accessibleName().split('-')
         self.lst_images[field_tab[1]] += [index]
-        self.database.update(int(field_tab[1]), path_name, doc[path_name])
-        self.database.update(int(field_tab[1]), text_name, doc[text_name])
+
+        path_name_lst = field_tab[0] + "Path-" + field_tab[1]
+        text_name_lst = field_tab[0] + "Text-" + field_tab[1]
+        tab_all.lst[path_name_lst]["value"] += [name]
+        tab_all.lst[text_name_lst]["value"] += [""]
 
     def remove_image(self, index):
-        sender = self.sender()
+        sender = self.parent()
         while True:
             field_name = sender.accessibleName()
-            if field_name:
+            if "vulns" in field_name:
                 break
             if sender.parent() is None:
                 return
             sender = sender.parent()
+        field_tab = self.sender().accessibleName().split('-')
 
-        field_tab = field_name.split('-')
+        tab_all = sender.tabs["All"]
         index_images = list(self.lst_images[field_tab[1]]).index(index)
-        doc = self.database.search_by_id(int(field_tab[1]))
-
-        path_name = field_tab[0] + "Path"
-        text_name = field_tab[0] + "Text"
-        del doc[path_name][index_images]
-        del doc[text_name][index_images]
 
         del self.lst_images[field_tab[1]][index_images]
-        self.database.update(int(field_tab[1]), path_name, doc[path_name])
-        self.database.update(int(field_tab[1]), text_name, doc[text_name])
+
+        path_name_lst = field_tab[0] + "Path-" + field_tab[1]
+        text_name_lst = field_tab[0] + "Text-" + field_tab[1]
+        del tab_all.lst[path_name_lst]["value"][index_images]
+        del tab_all.lst[text_name_lst]["value"][index_images]
 
     def modify_image(self, index, name, string):
-        sender = self.sender()
+        sender = self.parent()
         while True:
             field_name = sender.accessibleName()
-            if field_name:
+            if "vulns" in field_name:
                 break
             if sender.parent() is None:
                 return
             sender = sender.parent()
 
-        field_tab = field_name.split('-')
+        tab_all = sender.tabs["All"]
+        field_tab = self.sender().accessibleName().split('-')
         index_images = list(self.lst_images[field_tab[1]]).index(index)
-        doc = self.database.search_by_id(int(field_tab[1]))
 
-        path_name = field_tab[0] + "Path"
-        text_name = field_tab[0] + "Text"
-        doc[path_name][index_images] = name
-        doc[text_name][index_images] = string
-
-        self.database.update(int(field_tab[1]), path_name, doc[path_name])
-        self.database.update(int(field_tab[1]), text_name, doc[text_name])
+        path_name_lst = field_tab[0] + "Path-" + field_tab[1]
+        text_name_lst = field_tab[0] + "Text-" + field_tab[1]
+        tab_all.lst[path_name_lst]["value"][index_images] = name
+        tab_all.lst[text_name_lst]["value"][index_images] = string
 
     def set_status_vuln(self, doc_id, dispay_popup_error=False):
         """Internal method replacing the variables from the script corresponding with the ID"""
@@ -632,141 +631,154 @@ class Tab(QScrollArea):
             lst = self.lst
 
         for ident, field in lst.items():
-            if "args" in field:
-                widget = field["class"](*(field["args"] + [self]))
-            elif "arg" in field:
-                if "images" in ident:
-                    widget = field["class"](self)
-                    doc_id = ident.split("-")[1]
-                    doc = self.database.search_by_id(int(doc_id))
-                    for index in range(len(doc["imagesText"])):
-                        self.lst_images[doc_id] += [index]
-                        widget.add_chooser(
-                            doc["imagesPath"][index], doc["imagesText"][index], doc["imagesHistory"])
-                    widget.set_history(doc["imagesHistory"])
-                    widget.add_chooser()
-                else:
+            if "class" in field:
+                if "args" in field:
+                    widget = field["class"](*(field["args"] + [self]))
+                elif "arg" in field:
                     widget = field["class"](field["arg"], self)
                     try:
                         getattr(widget, field["class"]).emit(field["arg"])
                     except (TypeError, AttributeError):
                         pass
-            else:
-                widget = field["class"](self)
-
-            widget.setAccessibleName(ident)
-            self.fields[ident] = widget
-
-            if "signal" in field:
-
-                # If there are several signals, we associate each signal with the
-                #   corresponding function (with same index)
-                if isinstance(field["signal"], list):
-                    for index in range(len(field["signal"])):
-                        if "signalFct" in field:
-                            self.set_signal(widget, field["signal"][index], field["signalFct"][index])
-                        else:
-                            getattr(widget, field["signal"][index]).connect(self.change_value)
                 else:
-                    if "signalFct" in field:
-                        if isinstance(field["signalFct"], list):
-                            for signal in field["signalFct"]:
-                                self.set_signal(widget, field["signal"], signal)
-                        else:
-                            self.set_signal(widget, field["signal"], field["signalFct"])
+                    widget = field["class"](self)
+                    if "images" in ident:
+                        # We go up the parents until we find the Vulns tab, retrieving the images memory
+                        sender = self.sender()
+                        while True:
+                            field_name = sender.accessibleName()
+                            if "vulns" in field_name:
+                                break
+                            if sender.parent() is None:
+                                return
+                            sender = sender.parent()
+                        tab_all = sender.tabs["All"]
+
+                        doc_id = ident.split("-")[1]
+                        if "imagesPath-"+doc_id in tab_all.lst:
+                            paths = tab_all.lst["imagesPath-" + doc_id]["value"]
+                            texts = tab_all.lst["imagesText-" + doc_id]["value"]
+                            history = tab_all.lst["imagesHistory-" + doc_id]["value"]
+                            for index in range(len(texts)):
+                                self.lst_images[doc_id] += [index]
+                                widget.add_chooser(
+                                    paths[index], texts[index], history)
+                            widget.set_history(history)
+                            widget.add_chooser()
+
+                widget.setAccessibleName(ident)
+                self.fields[ident] = widget
+
+                if "signal" in field:
+
+                    # If there are several signals, we associate each signal with the
+                    #   corresponding function (with same index)
+                    if isinstance(field["signal"], list):
+                        for index in range(len(field["signal"])):
+                            if "signalFct" in field:
+                                self.set_signal(widget, field["signal"][index], field["signalFct"][index])
+                            else:
+                                getattr(widget, field["signal"][index]).connect(self.change_value)
                     else:
-                        getattr(widget, field["signal"]).connect(self.change_value)
+                        if "signalFct" in field:
+                            if isinstance(field["signalFct"], list):
+                                for signal in field["signalFct"]:
+                                    self.set_signal(widget, field["signal"], signal)
+                            else:
+                                self.set_signal(widget, field["signal"], field["signalFct"])
+                        else:
+                            getattr(widget, field["signal"]).connect(self.change_value)
 
-            if "list" in field:
-                for line in field["list"]["lines"]:
-                    line_list = field["list"]["class"](line, widget)
-                    if "flags" in field["list"]:
-                        line_list.setFlags(field["list"]["flags"])
-                    if "setData" in field["list"]:
-                        for arg1, arg2 in field["list"]["setData"].items():
-                            line_list.setData(arg1, arg2)
+                if "list" in field:
+                    for line in field["list"]["lines"]:
+                        line_list = field["list"]["class"](line, widget)
+                        if "flags" in field["list"]:
+                            line_list.setFlags(field["list"]["flags"])
+                        if "setData" in field["list"]:
+                            for arg1, arg2 in field["list"]["setData"].items():
+                                line_list.setData(arg1, arg2)
 
-            if "items" in field:
-                for item in field["items"]:
-                    widget.addItem(item)
+                if "items" in field:
+                    for item in field["items"]:
+                        widget.addItem(item)
 
-            if "flags" in field:
-                widget.setFlags(field["flags"])
+                if "flags" in field:
+                    widget.setFlags(field["flags"])
 
-            if "setLength" in field:
-                char_width = widget.fontMetrics().averageCharWidth() * 1.1
-                widget.setFixedWidth(int(char_width * field["setLength"]))
+                if "setLength" in field:
+                    char_width = widget.fontMetrics().averageCharWidth() * 1.1
+                    widget.setFixedWidth(int(char_width * field["setLength"]))
 
-            if "setData" in field:
-                for arg1, arg2 in field["setData"].items():
-                    widget.setData(arg1, arg2)
+                if "setData" in field:
+                    for arg1, arg2 in field["setData"].items():
+                        widget.setData(arg1, arg2)
 
-            if "setCurrentText" in field:
-                widget.setCurrentText(field["setCurrentText"])
+                if "setCurrentText" in field:
+                    widget.setCurrentText(field["setCurrentText"])
 
-            if "setText" in field:
-                widget.setText(field["setText"])
+                if "setText" in field:
+                    widget.setText(field["setText"])
 
-            if "selectionMode" in field:
-                widget.setSelectionMode(field["selectionMode"])
+                if "selectionMode" in field:
+                    widget.setSelectionMode(field["selectionMode"])
 
-            if "clicked" in field:
-                widget.clicked.connect(getattr(self, field["clicked"]))
+                if "clicked" in field:
+                    widget.clicked.connect(getattr(self, field["clicked"]))
 
-            if "setStyleSheet" in field:
-                widget.setStyleSheet(field["setStyleSheet"])
+                if "setStyleSheet" in field:
+                    widget.setStyleSheet(field["setStyleSheet"])
 
-            if "setReadOnly" in field:
-                widget.setReadOnly(field["setReadOnly"])
+                if "setReadOnly" in field:
+                    widget.setReadOnly(field["setReadOnly"])
 
-            if "selectionMode" in field:
-                widget.setSelectionMode(field["selectionMode"])
+                if "selectionMode" in field:
+                    widget.setSelectionMode(field["selectionMode"])
 
-            if "label" in field:
+                if "label" in field:
 
-                # Adds a symbol (or image if it's available) to warn the user that help is available
-                if "help" in field:
-                    label = ClickableQWidget()
-                    layout = QGridLayout(label)
-                    layout.setContentsMargins(0, 0, 0, 0)
-                    if "helpLogo" in field and len(field["helpLogo"]) > 0:
-                        pixmap = QPixmap(field["helpLogo"])
-                        if pixmap is not None:
-                            text_label = QLabel(field["label"])
-                            image_label = QLabel()
+                    # Adds a symbol (or image if it's available) to warn the user that help is available
+                    if "help" in field:
+                        label = ClickableQWidget()
+                        layout = QGridLayout(label)
+                        layout.setContentsMargins(0, 0, 0, 0)
+                        if "helpLogo" in field and len(field["helpLogo"]) > 0:
+                            pixmap = QPixmap(field["helpLogo"])
+                            if pixmap is not None:
+                                text_label = QLabel(field["label"])
+                                image_label = QLabel()
 
-                            image_label.setPixmap(pixmap)
-                            image_label.setAlignment(Qt.AlignCenter)
-                            text_label.setMinimumHeight(pixmap.height())
-                            text_label.setAlignment(Qt.AlignCenter)
+                                image_label.setPixmap(pixmap)
+                                image_label.setAlignment(Qt.AlignCenter)
+                                text_label.setMinimumHeight(pixmap.height())
+                                text_label.setAlignment(Qt.AlignCenter)
 
-                            layout.addWidget(text_label, 0, 0, alignment=Qt.AlignLeft)
-                            layout.addWidget(image_label, 0, 1, alignment=Qt.AlignLeft)
-                            layout.setSpacing(0)
-                            label.setLayout(layout)
+                                layout.addWidget(text_label, 0, 0, alignment=Qt.AlignLeft)
+                                layout.addWidget(image_label, 0, 1, alignment=Qt.AlignLeft)
+                                layout.setSpacing(0)
+                                label.setLayout(layout)
+                            else:
+                                text_label = QLabel(field["label"] + " (?)")
+                                layout.addWidget(text_label, 0, 0, alignment=Qt.AlignLeft)
                         else:
                             text_label = QLabel(field["label"] + " (?)")
                             layout.addWidget(text_label, 0, 0, alignment=Qt.AlignLeft)
+                        label.clicked.connect(getattr(self, field["help"]))
                     else:
-                        text_label = QLabel(field["label"] + " (?)")
-                        layout.addWidget(text_label, 0, 0, alignment=Qt.AlignLeft)
-                    label.clicked.connect(getattr(self, field["help"]))
+                        label = QLabel(field["label"])
+                    self.grid.addWidget(label, self.row, 0)
+                    self.grid.addWidget(widget, self.row, 1, 1, -1)
+                elif "col" in field:
+                    if field["col"] > 0:
+                        self.row -= 1
+                    if "colspan" in field:
+                        self.grid.addWidget(
+                            widget, self.row + 1, field["col"], 1, field["colspan"])
+                    else:
+                        self.grid.addWidget(widget, self.row + 1, field["col"])
                 else:
-                    label = QLabel(field["label"])
-                self.grid.addWidget(label, self.row, 0)
-                self.grid.addWidget(widget, self.row, 1, 1, -1)
-            elif "col" in field:
-                if field["col"] > 0:
-                    self.row -= 1
-                if "colspan" in field:
-                    self.grid.addWidget(
-                        widget, self.row + 1, field["col"], 1, field["colspan"])
-                else:
-                    self.grid.addWidget(widget, self.row + 1, field["col"])
-            else:
-                self.grid.addWidget(widget, self.row, 0, 1, 2)
+                    self.grid.addWidget(widget, self.row, 0, 1, 2)
 
-            self.row += 1
+                self.row += 1
 
     def set_signal(self, widget, signal, signal_fct):
         getattr(widget, signal).connect(getattr(self, signal_fct))
