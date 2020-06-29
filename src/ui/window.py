@@ -113,6 +113,11 @@ class Window(QWidget):
             if "imagesHistory" in field[0]:
                 values["Vulns"][field[1]]["imagesHistory"] = elem
 
+        # Removing db from values
+        for name, value in values.items():
+            if "db" in value:
+                del values[name]["db"]
+
         output_filename = QFileDialog.getSaveFileName(
             self, "Generate Report", "output.docx",
             "Microsoft Document [*.docx] (*.docx);;All files [*] (*)")[0]
