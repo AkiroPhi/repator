@@ -82,23 +82,23 @@ class Vulns(QWidget):
 
     def load(self, values):
         """Tab load."""
-        for id, elem in values.items():
+        for idents, elem in values.items():
 
             # To avoid crashing the application if it is a backup before the update allowing images
             if "imagesPath" in elem:
-                self.tabs["All"].lst["imagesPath-"+id] = elem["imagesPath"]
-                self.tabs["All"].lst["imagesText-"+id] = elem["imagesText"]
-                self.tabs["All"].lst["imagesHistory-"+id] = elem["imagesHistory"]
+                self.tabs["All"].lst["imagesPath-"+idents] = elem["imagesPath"]
+                self.tabs["All"].lst["imagesText-"+idents] = elem["imagesText"]
+                self.tabs["All"].lst["imagesHistory-"+idents] = elem["imagesHistory"]
         return self.tabs["All"].load(values)
 
     def save(self):
         """Tab save."""
         db = self.tabs["All"].save()
-        for id, elem in db.items():
+        for idents, elem in db.items():
 
             # To avoid crashing the application if it is a backup before the update allowing images
-            if "imagesPath-"+id in elem:
-                elem["imagesPath"] = self.tabs["All"].lst["imagesPath-"+id]
-                elem["imagesText"] = self.tabs["All"].lst["imagesText-"+id]
-                elem["imagesHistory"] = self.tabs["All"].lst["imagesHistory-"+id]
+            if "imagesPath-"+idents in elem:
+                elem["imagesPath"] = self.tabs["All"].lst["imagesPath-"+idents]
+                elem["imagesText"] = self.tabs["All"].lst["imagesText-"+idents]
+                elem["imagesHistory"] = self.tabs["All"].lst["imagesHistory-"+idents]
         return db

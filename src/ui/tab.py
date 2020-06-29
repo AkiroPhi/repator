@@ -293,11 +293,42 @@ class Tab(QScrollArea):
         for name, value in values.items():
             if name.isdigit():
                 doc_id = name
+
+                # Adds vulnerabilities that are not currently present
+                if self.database.search_by_id(int(doc_id)) is None and self.add_fct is not None:
+                    doc_id = self.database.insert_record(value)
+
+                    lst = OrderedDict()
+                    self.add_fct(lst, doc_id, self.database.search_by_id(doc_id))
+                    self.parse_lst(lst)
+                    for ident, field in lst.items():
+                        self.lst[ident] = field
+                    self.fields["buttonScript-" + str(doc_id)].setEnabled(len(value["script"]) > 0)
+                    self.fields["categorySort"].connect_buttons(doc_id)
+                    self.fields["diff-" + str(doc_id)].added()
+                    doc_id = str(doc_id)
+
+                # Updates vulnerabilities that are currently present
+                elif self.database.search_by_id(int(doc_id)) is not None:
+                    vuln = self.database.search_by_id(int(doc_id))
+                    is_updated = False
+                    for keys in value:
+                        if keys in vuln and vuln[keys] != value[keys]:
+                            is_updated = True
+                            self.database.update(int(name), keys, value[keys])
+                    if is_updated:
+                        self.fields["buttonScript-" + str(doc_id)].setEnabled(len(value["script"]) > 0)
+                        self.fields["categorySort"].connect_buttons(doc_id)
+                        self.fields["diff-" + str(doc_id)].edited()
+
                 if "check-" + doc_id in self.fields:
                     self.fields["check-" + doc_id].setCheckState(Qt.Checked)
                 if "status" in value and "isVuln-" + doc_id in self.fields:
                     self.fields["isVuln-" +
                                 doc_id].setCurrentText(value["status"])
+                for name_field in value.keys():
+                    if name_field + "-" + doc_id in self.fields:
+                        self.fields[name_field + "-" + doc_id].setText(value[name_field])
 
             elif name in self.fields:
                 field = self.fields[name]
@@ -562,6 +593,7 @@ class Tab(QScrollArea):
     def display_error_test(self, result):
         """Internal method displaying a popup according to the content of result"""
 
+        message = ""
         if result is None:
             message = "The current script is not executable, please check the syntax !"
         elif result is not None and not result[0] in self.valid_status_vuln:
@@ -655,7 +687,7 @@ class Tab(QScrollArea):
                         tab_all = sender.tabs["All"]
 
                         doc_id = ident.split("-")[1]
-                        if "imagesPath-"+doc_id in tab_all.lst:
+                        if "imagesPath-" + doc_id in tab_all.lst:
                             paths = tab_all.lst["imagesPath-" + doc_id]["value"]
                             texts = tab_all.lst["imagesText-" + doc_id]["value"]
                             history = tab_all.lst["imagesHistory-" + doc_id]["value"]
