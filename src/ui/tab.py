@@ -416,8 +416,9 @@ class Tab(QScrollArea):
                     name_lst.append(name)
 
         for name in name_lst:
-            self.grid.removeWidget(self.fields[name])
-            self.fields[name].deleteLater()
+            if not isinstance(self.fields[name], dict):
+                self.grid.removeWidget(self.fields[name])
+                self.fields[name].deleteLater()
             del self.fields[name]
             del self.lst[name]
 
@@ -744,6 +745,9 @@ class Tab(QScrollArea):
                 if "setCurrentText" in field:
                     widget.setCurrentText(field["setCurrentText"])
 
+                if "setDate" in field:
+                    widget.setDate(field["setDate"])
+
                 if "setText" in field:
                     widget.setText(field["setText"])
 
@@ -811,6 +815,8 @@ class Tab(QScrollArea):
                     self.grid.addWidget(widget, self.row, 0, 1, 2)
 
                 self.row += 1
+            else:
+                self.fields[ident] = field
 
     def set_signal(self, widget, signal, signal_fct):
         getattr(widget, signal).connect(getattr(self, signal_fct))
