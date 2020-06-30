@@ -79,15 +79,8 @@ class Tab(QScrollArea):
 
     def update_vuln(self, string=None):
         """Updates the database value of the sender and updates the fields values accordingly."""
-        sender = self.sender()
-        while True:
-            field_name = sender.accessibleName()
-            if field_name:
-                break
-            if sender.parent() is None:
-                return
-            sender = sender.parent()
-
+        sender = self.get_parent(self.sender(), firstAccessibleName=True)
+        field_name = sender.accessibleName()
         field_tab = field_name.split('-')
 
         if string is None:
@@ -116,19 +109,9 @@ class Tab(QScrollArea):
         If the 'Script' field is empty, the button is disabled. Otherwise it's activated"""
 
         # Get the object that sent the signal (the modified 'Script' field)
-        sender = self.sender()
-        doc_id = ""
+        sender = self.get_parent(self.sender(), "vulns")
+        doc_id = self.get_parent(self.sender(), firstAccessibleName=True).accessibleName().split('-')[1]
 
-        # We go up the parents until we find the Vulns tab, retrieving the modified vulnerability ID
-        while True:
-            field_name = sender.accessibleName()
-            if "vulns" in field_name:
-                break
-            if field_name:
-                doc_id = field_name.split('-')[1]
-            if sender.parent() is None:
-                return
-            sender = sender.parent()
         sender.tabs["All"].fields["buttonScript-" + doc_id].setEnabled(len(string) > 0)
 
     def load_history(self, index):
@@ -161,14 +144,7 @@ class Tab(QScrollArea):
 
     def save_history_image(self, history_field_name):
         """Writes the history into the database."""
-        sender = self.parent()
-        while True:
-            field_name = sender.accessibleName()
-            if "vulns" in field_name:
-                break
-            if sender.parent() is None:
-                return
-            sender = sender.parent()
+        sender = self.get_parent(self.parent(), "vulns")
 
         tab_all = sender.tabs["All"]
         field_tab = history_field_name.split('-')
@@ -400,22 +376,13 @@ class Tab(QScrollArea):
         """Shows a vuln as deleted on first pressure on the button "delete" and removes the vuln
         on the second pressure.
         """
-        sender = self.sender()
+        sender = self.get_parent(self.sender(), "vulns")
         doc_id = sender.accessibleName().split("-")[1]
 
         diff = self.fields["diff-" + doc_id]
         if diff.status() != DiffStatus.DELETED and diff.status() != DiffStatus.ADDED:
             diff.deleted()
             return
-
-        # We go up the parents until we find the Vulns tab
-        while True:
-            field_name = sender.accessibleName()
-            if "vulns" in field_name:
-                break
-            if sender.parent() is None:
-                return
-            sender = sender.parent()
 
         if doc_id in sender.tabs:
             sender.close_tab(list(sender.tabs).index(doc_id))
@@ -454,16 +421,9 @@ class Tab(QScrollArea):
     def status_vuln(self):
         """Calculates the status of the selected vulnerability.
         This method is called by a signal"""
-        sender = self.sender()
-
         # Gets the selected vulnerability ID
-        while True:
-            field_name = sender.accessibleName()
-            if field_name:
-                break
-            if sender.parent() is None:
-                return
-            sender = sender.parent()
+        sender = self.get_parent(self.sender(), firstAccessibleName=True)
+
         self.set_status_vuln(sender.accessibleName().split("-")[1], dispay_popup_error=True)
 
     def status_vulns(self):
@@ -484,16 +444,9 @@ class Tab(QScrollArea):
             self.lst[ident] = field
 
     def add_image(self, index, name):
-        sender = self.parent()
-        while True:
-            field_name = sender.accessibleName()
-            if "vulns" in field_name:
-                break
-            if sender.parent() is None:
-                return
-            sender = sender.parent()
+        tab_vuln = self.get_parent(self.parent(), "vulns")
+        tab_all = tab_vuln.tabs["All"]
 
-        tab_all = sender.tabs["All"]
         field_tab = self.sender().accessibleName().split('-')
         self.lst_images[field_tab[1]] += [index]
 
@@ -503,17 +456,10 @@ class Tab(QScrollArea):
         tab_all.lst[text_name_lst]["value"] += [""]
 
     def remove_image(self, index):
-        sender = self.parent()
-        while True:
-            field_name = sender.accessibleName()
-            if "vulns" in field_name:
-                break
-            if sender.parent() is None:
-                return
-            sender = sender.parent()
-        field_tab = self.sender().accessibleName().split('-')
+        tab_vuln = self.get_parent(self.parent(), "vulns")
+        tab_all = tab_vuln.tabs["All"]
 
-        tab_all = sender.tabs["All"]
+        field_tab = self.sender().accessibleName().split('-')
         index_images = list(self.lst_images[field_tab[1]]).index(index)
 
         del self.lst_images[field_tab[1]][index_images]
@@ -524,16 +470,9 @@ class Tab(QScrollArea):
         del tab_all.lst[text_name_lst]["value"][index_images]
 
     def modify_image(self, index, name, string):
-        sender = self.parent()
-        while True:
-            field_name = sender.accessibleName()
-            if "vulns" in field_name:
-                break
-            if sender.parent() is None:
-                return
-            sender = sender.parent()
+        tab_vuln = self.get_parent(self.parent(), "vulns")
+        tab_all = tab_vuln.tabs["All"]
 
-        tab_all = sender.tabs["All"]
         field_tab = self.sender().accessibleName().split('-')
         index_images = list(self.lst_images[field_tab[1]]).index(index)
 
@@ -542,6 +481,19 @@ class Tab(QScrollArea):
         tab_all.lst[path_name_lst]["value"][index_images] = name
         tab_all.lst[text_name_lst]["value"][index_images] = string
 
+    def get_parent(self, parent, name=None, firstAccessibleName=False):
+        """Internal method returning the parent with accessible name 'name'.
+        If 'firstName' is True, returns the first parent.
+        If 'name' is None, returns the highest parent."""
+        sender = parent
+        while True:
+            field_name = sender.accessibleName()
+            if (firstAccessibleName and field_name) or (name is not None and name in field_name):
+                return sender
+            if sender.parent() is None:
+                return None if name is not None else sender
+            sender = sender.parent()
+
     def set_status_vuln(self, doc_id, dispay_popup_error=False):
         """Internal method replacing the variables from the script corresponding with the ID"""
 
@@ -549,12 +501,8 @@ class Tab(QScrollArea):
         if "script" in vuln and len(vuln["script"]) > 0:
 
             # Gets the Window tab
-            sender = self.sender()
-            while True:
-                if sender.parent() is None:
-                    break
-                sender = sender.parent()
-            fields = sender.tabs["Mission"].fields
+            tab_window = self.get_parent(self.sender())
+            fields = tab_window.tabs["Mission"].fields
             script = vuln["script"]
 
             # Replace all variables
@@ -676,15 +624,7 @@ class Tab(QScrollArea):
                     widget = field["class"](self)
                     if "images" in ident:
                         # We go up the parents until we find the Vulns tab, retrieving the images memory
-                        sender = self.sender()
-                        while True:
-                            field_name = sender.accessibleName()
-                            if "vulns" in field_name:
-                                break
-                            if sender.parent() is None:
-                                return
-                            sender = sender.parent()
-                        tab_all = sender.tabs["All"]
+                        tab_all = self.get_parent(self.sender(), "vulns").tabs["All"]
 
                         doc_id = ident.split("-")[1]
                         if "imagesPath-" + doc_id in tab_all.lst:
