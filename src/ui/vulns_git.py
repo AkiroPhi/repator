@@ -9,7 +9,7 @@ from copy import copy
 from PyQt5.QtGui import QColor
 from PyQt5.QtCore import Qt, QCoreApplication
 from PyQt5.QtWidgets import (QWidget, QTabWidget, QGridLayout, QTabBar,
-                             QPushButton, QLabel, QComboBox, QHBoxLayout, QMessageBox)
+                             QPushButton, QLabel, QComboBox, QMessageBox)
 
 from conf.ui_vuln_changes import vuln_changes
 from conf.ui_vulns_initial import VULNS_INITIAL

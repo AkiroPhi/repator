@@ -6,17 +6,25 @@ from PyQt5.QtWidgets import (QComboBox, QTreeView, QAbstractItemView, QHeaderVie
 from PyQt5.QtGui import (QStandardItemModel, QStandardItem)
 
 class History(QComboBox):
+    """
+    Class that represent the history of some fields and allow to delete some entries.
+    """
+
     def __init__(self, parent):
         super().__init__(parent)
         self._parent = parent
         self.init_view()
 
     def init_model(self):
-        """"""
+        """
+        Init the model attached to the history.
+        """
         self.setModel(QStandardItemModel())
 
     def init_view(self):
-        """"""
+        """
+        Init the view attached to the history.
+        """
         self.init_model()
         view = QTreeView()
         view.setHeaderHidden(True)
@@ -27,7 +35,9 @@ class History(QComboBox):
         self.setView(view)
 
     def addItem(self, txt_item):
-        """Override"""
+        """
+        Add item to the model and the view and add a delete fields if needed.
+        """
         choice = QStandardItem(txt_item)
         self.model().appendRow([choice, QStandardItem("delete") ]
                                if self.model().rowCount() > 0 else choice)
@@ -36,7 +46,9 @@ class History(QComboBox):
 
 
     def removeItem(self, row):
-        """Remove item at row in the model and the database"""
+        """
+        Remove item at row in the model and the database.
+        """
         value = self.model().item(row).text() # by default column is 0
         self.model().removeRow(row)
         database = self._parent.database
@@ -48,6 +60,9 @@ class History(QComboBox):
         database.update(int(field_tab[1]), field_tab[0], history)
 
     def dealWithPressEvent(self, index):
+        """
+        Event called each time that the user select a fields in the view.
+        """
         item = self.model().itemFromIndex(index)
         col, row = item.column(), item.row()
         if col == 1 and row > 0: # don't delete the first row

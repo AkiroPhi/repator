@@ -83,6 +83,7 @@ class Git(QObject):
                 if diffs and diffs.isVisible():
                     refresh_button = diffs.layout().itemAt(0).widget().widget(0).widget.layout().itemAt(3).widget()
                     refresh_button.setStyleSheet("QPushButton { background-color : red }")
+                    # TODO: add an automatic refresh of the diff window if changed
         except GitCommandError as err:
             print(err)
             self.git_reachable = False
