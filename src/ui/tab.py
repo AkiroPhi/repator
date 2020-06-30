@@ -775,7 +775,11 @@ class Tab(QScrollArea):
                         layout.setContentsMargins(0, 0, 0, 0)
                         if "helpLogo" in field and len(field["helpLogo"]) > 0:
                             pixmap = QPixmap(field["helpLogo"])
-                            if pixmap is not None:
+                            if "helpDimension" in field:
+                                pixmap = pixmap.scaledToWidth(field["helpDimension"][0])
+                                pixmap = pixmap.scaledToHeight(field["helpDimension"][1])
+
+                            if not pixmap.isNull():
                                 text_label = QLabel(field["label"])
                                 image_label = QLabel()
 

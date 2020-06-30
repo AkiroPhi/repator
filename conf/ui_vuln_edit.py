@@ -138,7 +138,7 @@ def vuln_editing(doc_id, vuln, lang=""):
         "signal": "textChanged",
         "signalFct": ["update_vuln", "update_button"],
         "help": "display_help_var",
-        "helpLogo": "",
+        "helpLogo": "img/help.png",
         "arg": vuln["script"+lang] if vuln["script"+lang] else vuln["script"]
     }
     lst["regexVuln"+lang+"-" + str(doc_id)] = {
