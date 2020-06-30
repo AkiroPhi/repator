@@ -394,10 +394,10 @@ class Tab(QScrollArea):
         """Shows a vuln as deleted on first pressure on the button "delete" and removes the vuln
         on the second pressure.
         """
+        doc_id = self.sender().accessibleName().split("-")[1]
         sender = self.get_parent(self.sender(), "vulns")
         if sender is None:
             return
-        doc_id = sender.accessibleName().split("-")[1]
 
         diff = self.fields["diff-" + doc_id]
         if diff.status() != DiffStatus.DELETED and diff.status() != DiffStatus.ADDED:
