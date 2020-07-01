@@ -75,7 +75,9 @@
         "SQL injection may be used by malicious peoples to read all the content of your database.\nDepending on the database configuration and on the injected SQL query, SQL injections are often allowing database writing.\nIn some case SQL injection may also lead to server side code execution."
       ],
       "script": "ls -l",
-      "sub_category": "User input validation"
+      "sub_category": "User input validation",
+      "status": "Vulnerable",
+      "recoFR": "Never trust user supplied inputs, apply some filtering before using them into SQL queries.\nUse SQL prepared statements instead of regular queries."
     },
     "3": {
       "A": "High",
@@ -115,7 +117,8 @@
         "XSS may be used by malicious peoples to have some client-side code execution.\\nThis code execution can be used for example to steal user's session, to steal user's sensitives data or to perform some actions using his authorizations."
       ],
       "script": "ls -l",
-      "sub_category": "User input validation"
+      "sub_category": "User input validation",
+      "status": "Not Vulnerable"
     }
   }
 }
