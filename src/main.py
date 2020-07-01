@@ -13,7 +13,7 @@ from PyQt5.QtWidgets import QApplication
 from conf.ui_mission import MISSION
 from conf.ui_auditors import PEOPLE, add_people
 from conf.ui_vulns import VULNS, add_vuln
-from src.dbhandler import DBHandler, DB_VULNS, DB_VULNS_INITIAL
+from src.dbhandler import DBHandler, DB_VULNS
 from src.ui.window import Window
 from src.ui.vulns import Vulns
 from src.git_interactions import Git
@@ -30,7 +30,6 @@ def main(conf=None):
     tab_lst["Vulns"] = dict(vulns={"class": Vulns, "arg": (
         copy(VULNS), DBHandler.vulns(), add_vuln)})
 
-    copyfile(DB_VULNS, DB_VULNS_INITIAL)
 
     # as we don't use arguments, I prefer to use python-fire
     app = QApplication([])

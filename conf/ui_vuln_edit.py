@@ -8,7 +8,7 @@ from PyQt5.QtWidgets import QLabel, QLineEdit, QComboBox
 
 from src.ui.image_chooser import ImagesChooser
 from src.ui.rich_text_edit import RichTextEdit
-
+from src.ui.history import History
 
 def vuln_editing(doc_id, vuln, lang=""):
     """Adds a the arguments to construct an edition of vulnerability tab given
@@ -59,7 +59,7 @@ def vuln_editing(doc_id, vuln, lang=""):
         "arg": vuln["labelPos"+lang] if vuln["labelPos"+lang] else vuln["labelPos"]
     }
     lst["observNegHistory"+lang+"-" + str(doc_id)] = {
-        "class": QComboBox,
+        "class": History,
         "label": "Negative Observation History",
         "signal": "currentIndexChanged",
         "signalFct": "load_history",
@@ -76,7 +76,7 @@ def vuln_editing(doc_id, vuln, lang=""):
             vuln["observNeg"].replace("\n", "<br/>"))
     }
     lst["observPosHistory"+lang+"-" + str(doc_id)] = {
-        "class": QComboBox,
+        "class": History,
         "label": "Positive Observation History",
         "signal": "currentIndexChanged",
         "signalFct": "load_history",
@@ -93,7 +93,7 @@ def vuln_editing(doc_id, vuln, lang=""):
             vuln["observPos"].replace("\n", "<br/>"))
     }
     lst["riskHistory"+lang+"-" + str(doc_id)] = {
-        "class": QComboBox,
+        "class": History,
         "label": "Risk History",
         "signal": "currentIndexChanged",
         "signalFct": "load_history",
@@ -110,7 +110,7 @@ def vuln_editing(doc_id, vuln, lang=""):
             vuln["risk"].replace("\n", "<br/>"))
     }
     lst["recoHistory"+lang+"-" + str(doc_id)] = {
-        "class": QComboBox,
+        "class": History,
         "label": "Recommandation History",
         "signal": "currentIndexChanged",
         "signalFct": "load_history",
