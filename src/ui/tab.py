@@ -16,6 +16,7 @@ from src.status_vuln import status_vuln
 from src.cvss import cvssv3, risk_level
 from src.dbhandler import DBHandler
 from src.ui.diff_status import DiffStatus
+from src.ui.sort_button import SortButton
 
 
 class Tab(QScrollArea):
@@ -335,6 +336,10 @@ class Tab(QScrollArea):
                     field.setCurrentText(value)
                 if "setDate" in dir(field):
                     field.setDate(QDate.fromString(value))
+        
+        for ident, value in self.fields.items():
+            if isinstance(value, SortButton):
+                value.update_values()
 
     def save(self, database=False):
         """Saves the values of lst into self.values and takes the values from the database to save
