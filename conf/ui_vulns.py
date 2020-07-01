@@ -98,5 +98,5 @@ def add_vuln(lst, doc_id, vuln):
         "value": []
     }
     lst["imagesHistory-" + str(doc_id)] = {
-        "value": []
+        "value": ["New observation"]
     }

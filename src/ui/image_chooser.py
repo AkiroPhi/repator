@@ -6,6 +6,7 @@ from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtWidgets import QWidget, QPushButton, QFileDialog, QGridLayout, QLabel, \
     QComboBox, QScrollArea
 
+from src.ui.history import History
 from src.ui.rich_text_edit import RichTextEdit
 
 
@@ -100,7 +101,7 @@ class LineChooser(QWidget):
 
         self.button_add = QPushButton("Select a file")
         self.button_del = QPushButton("Delete file")
-        self.history = QComboBox()
+        self.history = History(parent, local=True)
         self.label_file = QLabel("")
         self.label_text = RichTextEdit(args="", parent=self)
 
