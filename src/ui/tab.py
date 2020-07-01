@@ -34,6 +34,7 @@ class Tab(QScrollArea):
         self.values = OrderedDict()
         self.valid_status_vuln = ["Vulnerable", "Not Vulnerable"]
         self.lst_images = defaultdict(lambda: list())
+        self.lst_loaded = {}
 
         self.init_tab()
         self.init_buttons_status()
@@ -284,7 +285,9 @@ class Tab(QScrollArea):
                 doc_id = name
 
                 # Adds value that are not currently present
-                if self.database.search_by_id(int(doc_id)) is None and self.add_fct is not None:
+                if self.add_fct is not None and \
+                        (name not in self.lst_loaded and self.database.search_by_id(int(doc_id)) is None)\
+                        or (name in self.lst_loaded and self.database.search_by_id(int(self.lst_loaded[name])) is None):
                     doc_id = self.database.insert_record(value)
 
                     lst = OrderedDict()
@@ -298,7 +301,9 @@ class Tab(QScrollArea):
                     doc_id = str(doc_id)
 
                 # Updates value that are currently present
-                elif self.database.search_by_id(int(doc_id)) is not None:
+                elif name in self.lst_loaded or self.database.search_by_id(int(doc_id)) is not None:
+                    if name in self.lst_loaded:
+                        doc_id = self.lst_loaded[name]
                     vuln = self.database.search_by_id(int(doc_id))
                     is_updated = False
 
@@ -326,6 +331,8 @@ class Tab(QScrollArea):
                             not isinstance(self.fields[name_field + "-" + doc_id], dict):
                         self.fields[name_field + "-" + doc_id].setText(value[name_field])
 
+                self.lst_loaded[name] = doc_id
+
             elif name in self.fields:
                 field = self.fields[name]
                 if "setText" in dir(field):
@@ -334,7 +341,7 @@ class Tab(QScrollArea):
                     field.setCurrentText(value)
                 if "setDate" in dir(field):
                     field.setDate(QDate.fromString(value))
-        
+
         for ident, value in self.fields.items():
             if isinstance(value, SortButton):
                 value.update_values()
