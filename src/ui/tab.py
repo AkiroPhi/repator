@@ -38,6 +38,7 @@ class Tab(QScrollArea):
 
         self.init_tab()
         self.init_buttons_status()
+        self.initialized = True
 
     def init_tab(self):
         """Initializes features and widgets of a tab."""
@@ -83,30 +84,32 @@ class Tab(QScrollArea):
     def update_vuln(self, string=None):
         """Updates the database value of the sender and updates the fields values accordingly."""
 
-        # Gets first parent with accessible name (the modified field)
-        sender = self.get_parent(self.sender(), firstAccessibleName=True)
-        if sender is None:
-            return
-        field_name = sender.accessibleName()
-        field_tab = field_name.split('-')
+        # If the tab is not completely initialized, we do not update since the values are already up to date
+        if hasattr(self, 'initialized'):
+            # Gets first parent with accessible name (the modified field)
+            sender = self.get_parent(self.sender(), firstAccessibleName=True)
+            if sender is None:
+                return
+            field_name = sender.accessibleName()
+            field_tab = field_name.split('-')
 
-        if string is None:
-            string = sender
-        if "toString" in dir(string):
-            string = string.toString()
-        if "to_plain_text" in dir(string):
-            string = string.to_plain_text()
-        history_field_name = field_tab[0] + "History-" + field_tab[1]
-        doc = self.database.search_by_id(int(field_tab[1]))
-        diff_name = "diff-" + field_tab[1]
-        if diff_name in self._parent.tabs["All"].fields:
-            self._parent.tabs["All"].fields[diff_name].edited()
-        if history_field_name in self.fields:
-            index = self.fields[history_field_name].currentIndex()
-            if index == -1 or self.fields[field_name].to_plain_text() != doc[field_tab[0] + "History"][index]:
-                self.fields[history_field_name].setCurrentIndex(0)
-        self.database.update(int(field_tab[1]), field_tab[0], string)
-        self.update_cvss(field_tab[1])
+            if string is None:
+                string = sender
+            if "toString" in dir(string):
+                string = string.toString()
+            if "to_plain_text" in dir(string):
+                string = string.to_plain_text()
+            history_field_name = field_tab[0] + "History-" + field_tab[1]
+            doc = self.database.search_by_id(int(field_tab[1]))
+            diff_name = "diff-" + field_tab[1]
+            if diff_name in self._parent.tabs["All"].fields:
+                self._parent.tabs["All"].fields[diff_name].edited()
+            if history_field_name in self.fields:
+                index = self.fields[history_field_name].currentIndex()
+                if index == -1 or self.fields[field_name].to_plain_text() != doc[field_tab[0] + "History"][index]:
+                    self.fields[history_field_name].setCurrentIndex(0)
+            self.database.update(int(field_tab[1]), field_tab[0], string)
+            self.update_cvss(field_tab[1])
 
     def update_button(self, string=None):
         """"Updates the button corresponding to the 'Script' field of the modified vulnerability.
