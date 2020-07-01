@@ -9,13 +9,13 @@ from copy import copy
 from PyQt5.QtGui import QColor
 from PyQt5.QtCore import Qt, QCoreApplication
 from PyQt5.QtWidgets import (QWidget, QTabWidget, QGridLayout, QTabBar,
-                             QPushButton, QLabel, QComboBox)
+                             QPushButton, QLabel, QComboBox, QMessageBox)
 
 from conf.ui_vuln_changes import vuln_changes
 from conf.ui_vulns_initial import VULNS_INITIAL
 from conf.ui_vulns import VULNS
 from conf.report import LANGUAGES, GREEN, RED, BLUE, DEFAULT, COLORS, HEADERS, CVSS, HISTORIES
-from conf.db import DB_VULNS_INITIAL, DB_VULNS_GIT, DB_VULNS
+from conf.db import DB_VULNS_GIT, DB_VULNS, DB_VULNS_GIT_UPDATED
 from src.cvss import cvssv3, risk_level
 from src.git_interactions import Git
 from src.ui.checks_window import GitButton
@@ -38,11 +38,11 @@ class VulnsGit(QWidget):
         self.db_initial = args[1]
         self.db_git = args[2]
         self.add_fct = args[3]
-        self.dismiss = False
+        self.hide = False
         self.buttons = dict()
-        self.dismissed_vulns = set()
+        self.hidden_vulns = self.git.hidden_changes_vulns # using reference
         self.json_db_git = dict()
-        self.json_db_initial = dict()
+        self.json_db = dict()
 
         self.setWindowTitle(title)
 
@@ -67,7 +67,7 @@ class VulnsGit(QWidget):
         tab_lst = OrderedDict()
         tab_lst["All"] = self.lst
 
-        self.diffs_initial_git()
+        self.init_db_local_git()
         self.update_diffs()
 
         for label, lst in tab_lst.items():
@@ -118,25 +118,43 @@ class VulnsGit(QWidget):
     def init_bottom_buttons(self):
         """Creates the buttons at the bottom of the window "Diffs"."""
         self.buttons["uploadBtn"] = GitButton("Upload changes", "upload", self)
-        self.buttons["dismissBtn"] = GitButton(
-            "Dismiss changes", "dismiss", self)
+        self.buttons["hideBtn"] = GitButton("Hide changes", "hide", self)
         self.buttons["patchBtn"] = GitButton("Patch", "patch", self)
-        self.buttons["dismissOneBtn"] = QPushButton(
-            "Dismiss changes for this vuln")
-        self.buttons["patchOneBtn"] = QPushButton("Patch this vuln")
-        # self.buttons["uploadBtn"].clicked.connect(self.upload_changes)
-        # self.buttons["dismissBtn"].clicked.connect(self.dismiss_changes)
-        # self.buttons["patchBtn"].clicked.connect(self.patch_changes)
-        self.buttons["dismissOneBtn"].clicked.connect(self.dismiss_one_change)
-        self.buttons["patchOneBtn"].clicked.connect(self.patch_one_change)
-        self.grid.addWidget(self.buttons["uploadBtn"], 1, 0)
-        self.grid.addWidget(self.buttons["dismissBtn"], 1, 1)
-        self.grid.addWidget(self.buttons["patchBtn"], 1, 2)
-        self.grid.addWidget(self.buttons["dismissOneBtn"], 1, 1)
-        self.grid.addWidget(self.buttons["patchOneBtn"], 1, 2)
 
-        # TODO: remove this as the corresponding features are added.
-        self.buttons["uploadBtn"].setEnabled(False)
+        self.buttons["hideOneBtn"] = QPushButton("Hide changes for this vuln")
+        self.buttons["patchOneBtn"] = QPushButton("Patch this vuln")
+        self.buttons["duplicateOneButton"] = QPushButton("Duplicate this vuln")
+        self.buttons["uploadOneBtn"] = QPushButton("Upload this vuln")
+
+        # self.buttons["uploadBtn"].clicked.connect(self.upload_changes)
+        # self.buttons["hideBtn"].clicked.connect(self.hide_changes)
+        # self.buttons["patchBtn"].clicked.connect(self.patch_changes)
+        self.buttons["hideOneBtn"].clicked.connect(self.hide_one_change)
+        self.buttons["patchOneBtn"].clicked.connect(self.patch_one_change)
+        self.buttons["duplicateOneButton"].clicked.connect(self.duplicate_one_vuln)
+        self.buttons["uploadOneBtn"].clicked.connect(self.upload_one_change)
+        self.grid.addWidget(QWidget(), 1, 0)
+        self.grid.addWidget(QWidget(), 1 ,0)
+
+        bottomButton = QGridLayout()
+        bottomButton.setSpacing(5)
+        bottomButton.setContentsMargins(5, 5, 5, 5)
+
+        bottomButton.addWidget(self.buttons["uploadBtn"], 0, 0)
+        bottomButton.addWidget(self.buttons["hideBtn"], 0, 1)
+        bottomButton.addWidget(self.buttons["patchBtn"], 0, 2)
+        self.grid.itemAt(1).widget().setLayout(bottomButton)
+
+        bottomButton = QGridLayout()
+        bottomButton.setSpacing(5)
+        bottomButton.setContentsMargins(5, 5, 5, 5)
+
+        bottomButton.addWidget(self.buttons["uploadOneBtn"], 0, 0)
+        bottomButton.addWidget(self.buttons["hideOneBtn"], 0, 1)
+        bottomButton.addWidget(self.buttons["patchOneBtn"], 0, 2)
+        bottomButton.addWidget(self.buttons["duplicateOneButton"], 0, 3)
+        self.grid.itemAt(2).widget().setLayout(bottomButton)
+
 
         self.show_buttons_all_view()
 
@@ -146,33 +164,56 @@ class VulnsGit(QWidget):
         if not index:
             self.show_buttons_all_view()
         else:
-            self.show_buttons_changes_view()
+            ident = self.tabw.tabText(index)
+            self.show_buttons_changes_view(self.style[ident] == BLUE)
 
     def show_buttons_all_view(self):
         """Shows the buttons that have to be displayed when in the tab "All"."""
-        self.buttons["uploadBtn"].show()
-        self.buttons["dismissBtn"].show()
-        self.buttons["patchBtn"].show()
-        self.buttons["dismissOneBtn"].hide()
-        self.buttons["patchOneBtn"].hide()
+        self.grid.itemAt(2).widget().hide()
+        self.grid.itemAt(1).widget().show()
 
-    def show_buttons_changes_view(self):
+
+    def show_buttons_changes_view(self, duplicate):
         """Shows the buttons that have to be displayed when in any tab but "All"."""
-        self.buttons["uploadBtn"].show()
-        self.buttons["dismissBtn"].hide()
-        self.buttons["patchBtn"].hide()
-        self.buttons["dismissOneBtn"].show()
-        self.buttons["patchOneBtn"].show()
+        self.grid.itemAt(1).widget().hide()
+        self.grid.itemAt(2).widget().show()
+
+
+    def duplicate_one_vuln(self):
+        """Duplicate one vuln"""
+        index = self.tabw.currentIndex()
+        ident = self.tabw.tabText(index)
+        new_ident = max([int(x) for x in list(self.json_db.keys()) + list(self.json_db_git.keys()) ]) + 1
+        jsondb = "{\"_default\":" + \
+            json.dumps({(new_ident if x == ident else int(x)): self.json_db[x]
+                        for x in self.json_db.keys()}, sort_keys=True) + "}"
+        with open(DB_VULNS, 'w') as output:
+            output.write(jsondb)
+        for window in self.app.topLevelWidgets():
+            if window.windowTitle() == "Repator":
+                repator = window
+        self.refresh_repator(repator)
+        self.update_diffs()
+        self.refresh_tab_widget()
+        self.close_tab(index)
+
 
     def upload_changes(self, checked):
         """uploads changes made to local vuln database to the git repository."""
-        # TODO:
-        # Uploads the changes made to local database vulnerabilities to the
-        # remote git repository.
-        # => Need une fonction qui va vérifier la cohérence des bases de
-        # données.
+
+        # first pull the repo -->
+        # if changed --> warning + window
+        refresh_button = self.layout().itemAt(0).widget().widget(0).widget.layout().itemAt(3).widget()
+        if self.git.git_update() or refresh_button.styleSheet() == "QPushButton { background-color : red }":
+            self.refresh_tab_widget()
+            WarningWindow = QMessageBox()
+            WarningWindow.setText("Please retry, the file just has been updated and\nthe window refresh")
+            WarningWindow.exec()
+            return
+
+        # else write the file
         for ident in checked:
-            if self.style[ident] == RED:
+            if self.style[ident] == GREEN: # if the style is green, it's mean that the vuln is present in the git db and not in the local db
                 del self.json_db_git[ident]
             else:
                 self.json_db_git[ident] = self.json_db[ident]
@@ -181,8 +222,12 @@ class VulnsGit(QWidget):
                             for x in self.json_db_git.keys()}, sort_keys=True) + "}"
             with open(DB_VULNS_GIT, 'w') as output:
                 output.write(jsondb)
-            with open(DB_VULNS_INITIAL, 'w') as output:
+            with open(DB_VULNS_GIT_UPDATED, 'w') as output:
                 output.write(jsondb)
+
+            # and commit and push --> self.git.git_upload()
+            self.git.git_upload()
+
         # To also update repator window
         for window in self.app.topLevelWidgets():
             if window.windowTitle() == "Repator":
@@ -191,24 +236,64 @@ class VulnsGit(QWidget):
         self.update_diffs()
         self.refresh_tab_widget()
 
-    def dismiss_changes(self, checked):
+    def upload_one_change(self):
+        """uploads changes made to local vuln database to the git repository. of one vuln"""
+        for window in self.app.topLevelWidgets():
+            if window.windowTitle() == "Repator":
+                repator = window
+
+        refresh_button = self.layout().itemAt(0).widget().widget(0).widget.layout().itemAt(3).widget()
+        git_label = repator.layout().itemAt(5).widget()
+        if self.git.git_update() or refresh_button.styleSheet() == "QPushButton { background-color : red }":
+            self.refresh_tab_widget()
+            WarningWindow = QMessageBox()
+            WarningWindow.setText("Please retry, the file just has been updated and\nthe window refresh")
+            WarningWindow.exec()
+            return
+        if git_label.styleSheet() == "QPushButton { background-color : red }":
+            WarningWindow = QMessageBox()
+            WarningWindow.setText("Could not copnnect to the git repo\nPlease check your Internet connection or the connection to the repo.")
+            WarningWindow.exec()
+            return
+
+        index = self.tabw.currentIndex()
+        ident = self.tabw.tabText(index)
+        if self.style[ident] == GREEN: # if the style is green, it's mean that the vuln is present in the git db and not in the local db
+            del self.json_db_git[ident]
+        else:
+            self.json_db_git[ident] = self.json_db[ident]
+        jsondb = "{\"_default\":" + \
+            json.dumps({int(x): self.json_db_git[x]
+                        for x in self.json_db_git.keys()}, sort_keys=True) + "}"
+        with open(DB_VULNS_GIT, 'w') as output:
+            output.write(jsondb)
+        with open(DB_VULNS_GIT_UPDATED, 'w') as output:
+            output.write(jsondb)
+
+        self.git.git_upload()
+
+        # To also update repator window
+        self.refresh_repator(repator)
+        self.update_diffs()
+        self.refresh_tab_widget()
+
+    def hide_changes(self, checked):
         """Allows to choose which vulnerabilities are not followed."""
-        self.dismissed_vulns = checked
+        self.hidden_vulns.clear()
+        self.hidden_vulns.update(checked)
         self.refresh_tab_widget()
 
     def patch_changes(self, checked):
         """Allows to choose which changes to apply to the local vuln database."""
         for ident in checked:
             if self.style[ident] == RED:
-                del self.json_db_initial[ident]
+                del self.json_db[ident]
             else:
-                self.json_db_initial[ident] = self.json_db_git[ident]
+                self.json_db[ident] = self.json_db_git[ident]
             jsondb = "{\"_default\":" + \
-                json.dumps({int(x): self.json_db_initial[x]
-                            for x in self.json_db_initial.keys()}, sort_keys=True) + "}"
+                json.dumps({int(x): self.json_db[x]
+                            for x in self.json_db.keys()}, sort_keys=True) + "}"
             with open(DB_VULNS, 'w') as output:
-                output.write(jsondb)
-            with open(DB_VULNS_INITIAL, 'w') as output:
                 output.write(jsondb)
             # To also update repator window
         for window in self.app.topLevelWidgets():
@@ -218,11 +303,12 @@ class VulnsGit(QWidget):
         self.update_diffs()
         self.refresh_tab_widget()
 
-    def dismiss_one_change(self):
+    def hide_one_change(self):
         """Stops following the current vulnerability."""
         index = self.tabw.currentIndex()
         ident = self.tabw.tabText(index)
-        self.dismissed_vulns.add(ident)
+        self.hidden_vulns.add(ident)
+        self.buttons["hideBtn"].checked[ident] = True
         fields = self.tabw.widget(0).fields
         for widget in fields:
             name = widget.split("-")
@@ -235,16 +321,15 @@ class VulnsGit(QWidget):
         """Applies remote changes to local vuln database."""
         index = self.tabw.currentIndex()
         ident = self.tabw.tabText(index)
+
         if self.style[ident] == RED:
-            del self.json_db_initial[ident]
+            del self.json_db[ident]
         else:
-            self.json_db_initial[ident] = self.json_db_git[ident]
+            self.json_db[ident] = self.json_db_git[ident]
         jsondb = "{\"_default\":" + \
-            json.dumps({int(x): self.json_db_initial[x]
-                        for x in self.json_db_initial.keys()}, sort_keys=True) + "}"
+            json.dumps({int(x): self.json_db[x]
+                        for x in self.json_db.keys()}, sort_keys=True) + "}"
         with open(DB_VULNS, 'w') as output:
-            output.write(jsondb)
-        with open(DB_VULNS_INITIAL, 'w') as output:
             output.write(jsondb)
         # To also update repator window
         for window in self.app.topLevelWidgets():
@@ -259,7 +344,7 @@ class VulnsGit(QWidget):
         else:
             for field in ["category", "sub_category", "name"]:
                 tab.fields[field + "-" + ident].setText(
-                    self.json_db_initial[ident][field])
+                    self.json_db[ident][field])
                 self.refresh_repator(repator)
         self.update_diffs()
         self.refresh_tab_widget()
@@ -268,7 +353,7 @@ class VulnsGit(QWidget):
         """Adds all entries from self.style to the tab "All"."""
         entry = sorted(self.style.keys(), key=int)
         for ident in entry:
-            if ident not in self.dismissed_vulns:
+            if ident not in self.hidden_vulns:
                 item = self.db_initial.search_by_id(
                     int(ident)) or self.db_git.search_by_id(int(ident))
                 self.add_fct(lst, ident, item)
@@ -331,24 +416,24 @@ class VulnsGit(QWidget):
             if isinstance(widget, QLabel):
                 widget.setWordWrap(True)
 
-    def diffs_initial_git(self):
-        """Initializes self.json_db_git and self.json_db_initial."""
-        self.json_db_initial = json.loads(
-            open(DB_VULNS_INITIAL, 'r').read())["_default"]
+    def init_db_local_git(self):
+        """Initializes self.json_db_git and self.json_db."""
+        self.json_db = json.loads(
+            open(DB_VULNS, 'r').read())["_default"]
         self.json_db_git = json.loads(
             open(DB_VULNS_GIT, 'r').read())["_default"]
 
     def update_diffs(self):
-        """Diffs between json_db_git and json_db_initial and stores it into self.style."""
+        """Diffs between json_db_git and json_db and stores it into self.style."""
         style = dict()
         for ident in self.json_db_git:
-            if ident not in self.json_db_initial:
+            if ident not in self.json_db:
                 style[ident] = GREEN
-        for ident in self.json_db_initial:
+        for ident in self.json_db:
             if ident not in self.json_db_git:
                 style[ident] = RED
             else:
-                if self.json_db_git[ident] != self.json_db_initial[ident]:
+                if self.json_db_git[ident] != self.json_db[ident]:
                     style[ident] = BLUE
         self.style = style
 
@@ -583,7 +668,7 @@ class VulnsGit(QWidget):
         entry = sorted(self.style.keys())
         for ident in entry:
             fields = self.tabs["All"].fields
-            if ident not in self.dismissed_vulns:
+            if ident not in self.hidden_vulns:
                 color = self.style[ident]
                 if color == BLUE:
                     fields["diff-" + str(ident)].edited()
@@ -632,9 +717,9 @@ class VulnsGit(QWidget):
             vulns.tabs["All"].fields["edit-" + doc_id].animateClick()
         vulns.tabw.setCurrentWidget(vulns.tabs["All"])
 
-    def toggle_dismiss(self):
-        """Toggles self.dismiss."""
-        self.dismiss = False and self.dismiss
+    def toggle_hide(self):
+        """Toggles self.hide."""
+        self.hide = False and self.hide
 
     def git_refresh(self):
         """Reloads self.json_db_git after updating git."""

@@ -17,6 +17,7 @@ from src.cvss import cvssv3, risk_level
 from src.dbhandler import DBHandler
 from src.ui.diff_status import DiffStatus
 from src.ui.sort_button import SortButton
+from src.ui.history import History
 
 
 class Tab(QScrollArea):
@@ -95,13 +96,10 @@ class Tab(QScrollArea):
         if "to_plain_text" in dir(string):
             string = string.to_plain_text()
         history_field_name = field_tab[0] + "History-" + field_tab[1]
-
         doc = self.database.search_by_id(int(field_tab[1]))
-
         diff_name = "diff-" + field_tab[1]
         if diff_name in self._parent.tabs["All"].fields:
             self._parent.tabs["All"].fields[diff_name].edited()
-
         if history_field_name in self.fields:
             index = self.fields[history_field_name].currentIndex()
             if index == -1 or self.fields[field_name].to_plain_text() != doc[field_tab[0] + "History"][index]:

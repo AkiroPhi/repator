@@ -20,6 +20,6 @@ HEADERS = {"category", "sub_category", "name", "labelNeg", "labelPos"}
 CVSS = {"AV", "AC", "PR", "UI", "S", "C", "I", "A"}
 HISTORIES = {"reco", "observPos", "observNeg", "risk"}
 
-GIT = "git@10.0.0.103:~/vulnerabilities.git"
-SSH_KEY = "~/.ssh/git_tries"
+GIT = "git@127.0.0.1:~/vulnerabilities.git"
+SSH_KEY = "~/.ssh/id_rsa"
 REFRESH_RATE = 10

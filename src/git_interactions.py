@@ -1,5 +1,9 @@
 """Defines Git class, a helper to use Git."""
 # coding=utf-8
+from shutil import rmtree
+from git import Repo, GitCommandError
+from os import mkdir, chmod, unlink
+from stat import S_IWRITE
 
 from subprocess import Popen, PIPE
 from re import findall
@@ -8,7 +12,7 @@ import time
 from threading import Thread
 from shutil import copyfile
 from PyQt5.QtCore import QCoreApplication, QObject
-from conf.db import DB_VULNS_GIT, DB_VULNS_INITIAL, DB_VULNS_GIT_UPDATED
+from conf.db import DB_VULNS, DB_VULNS_GIT, DB_VULNS_GIT_UPDATED, DB_VULNS_GIT_DIR, DB_VULNS_GIT_FILE
 from conf.report import SSH_KEY, GIT, REFRESH_RATE
 
 
@@ -17,99 +21,94 @@ class Git(QObject):
 
     def __init__(self):
         super().__init__()
-        self.dismiss_changes = False
         self.git_reachable = False
-        self.init_git()
+        self.repo = None
         self.app = QCoreApplication.instance()
         self.setParent(self.app)
+        self.hidden_changes_vulns = set()
         self.background_thread = Thread(
             target=self.timer_vulnerabilities, daemon=True)
         self.background_update = Thread(
             target=self.git_update, daemon=True)
-
-    @staticmethod
-    def execute_command(arg, cwd="."):
-        """Executes the command arg in a subprocess with the option of setting the cwd."""
-        process = Popen(arg, shell=True, cwd=cwd, stdout=PIPE, stderr=PIPE)
-        res = process.communicate()
-        for line in res:
-            if line:
-                result = line.decode('utf-8')
-                err = findall("[eE][rR][rR][oO][rR]", result)
-                fat = findall("fatal", result)
-                if err or fat:
-                    raise RuntimeError(result)
+        self.git_routine()
 
     def init_git(self):
         """Initialises the git repository in a new directory."""
-        arg = "rm -rf .tmpGit"
-        Git.execute_command(arg)
-        arg = "mkdir .tmpGit"
-        Git.execute_command(arg)
-        args = []
-        try:
-            args.append("git init")
-            args.append("git config core.sshCommand \"ssh -i " +
-                        SSH_KEY + " -F /dev/null\"")
-            args.append("git remote add origin " + GIT)
-            for arg in args:
-                self.execute_command(arg, "./.tmpGit")
-        except RuntimeError as err:
-            print(err)
+        self.clean_git()
+        self.repo = Repo.init(DB_VULNS_GIT_DIR)
+        ssh_cmd = "ssh -i " + SSH_KEY + " -F /dev/null"
+        # self.repo.config_writer('core.sshCommand ' + ssh_cmd)
+        self.repo.git.custom_environment(GIT_SSH_COMMAND=ssh_cmd) # set the config ?
+        self.repo.create_remote('origin', url=GIT)
 
     def clean_git(self):
         """Removes the git file (the thread doesn't need to be killed since it is deamonized)."""
-        args = "rm -rf .tmpGit"
-        self.execute_command(args)
+        def on_rm_error(func, path, exc_info):
+            chmod(path, S_IWRITE)
+            unlink(path)
 
-    @staticmethod
-    def vulnerabilities_changed():
-        """Compares DB_VULNS_INITIAL and DB_VULNS_GIT"""
-        json_db_initial = json.loads(
-            open(DB_VULNS_INITIAL, 'r').read())["_default"]
-        json_db_updated = json.loads(
-            open(DB_VULNS_GIT, 'r').read())["_default"]
-        return not json_db_updated == json_db_initial
+        try:
+            rmtree(DB_VULNS_GIT_DIR, onerror=on_rm_error)
+        except FileNotFoundError:
+            pass
+
+    def vulnerabilities_changed(self):
+        """
+        Compares DB_VULNS and DB_VULNS_GIT
+        Return True if the vulnerabilities tracked changed
+        """
+        try:
+            json_db = json.loads(
+                open(DB_VULNS, 'r').read())["_default"]
+            json_db_git = json.loads(
+                open(DB_VULNS_GIT, 'r').read())["_default"]
+        except FileNotFoundError:
+            return True
+        list_id = set(json_db.keys()).union(set((json_db_git.keys())))
+        for ident in list_id:
+            if ident not in self.hidden_changes_vulns and (ident not in json_db or ident not in json_db_git or  json_db_git[ident] != json_db[ident]):
+                return True
+        return False
 
     def git_update(self):
-        """Pulls git repo and colors View changes button if the repository is unreachable."""
-        arg = "git pull origin master"
+        """Pulls git repo and colors View changes button if the repository is unreachable. and return True if the repo has been updated."""
+        repator, diffs, ret_value = None, None, False
         for window in self.app.topLevelWidgets():
             if window.windowTitle() == "Repator":
                 repator = window
             elif window.windowTitle() == "Diffs":
                 diffs = window
         try:
-            process = Popen(arg, shell=True, cwd="./.tmpGit",
-                            stdout=PIPE, stderr=PIPE)
-            res = process.communicate()
-            for line in res:
-                if line:
-                    result = line.decode('utf-8')
-                    err = findall("[eE][rR][rR][oO][rR]", result)
-                    fat = findall("fatal", result)
-                    if err:
-                        raise RuntimeError(result)
-                    if fat:
-                        raise RuntimeError(result)
+            self.repo.remote().pull('master')
             self.git_reachable = True
-        except RuntimeError:
+
+            if Git.git_changed():
+                copyfile(DB_VULNS_GIT_UPDATED, DB_VULNS_GIT)
+                ret_value = True
+                if diffs and diffs.isVisible():
+                    refresh_button = diffs.layout().itemAt(0).widget().widget(0).widget.layout().itemAt(3).widget()
+                    refresh_button.setStyleSheet("QPushButton { background-color : red }")
+                    # TODO: add an automatic refresh of the diff window if changed
+        except GitCommandError as err:
+            print(err)
             self.git_reachable = False
-            repator.layout().itemAt(3).widget().setStyleSheet(
-                "QPushButton { background-color : grey }")
-            diffs.layout().itemAt(0).widget().widget(0).widget.layout().itemAt(
-                3).widget().setStyleSheet("QPushButton { background-color : grey }")
+
+        self.update_changes_button_colors(repator, diffs)
+        return ret_value
+
 
     @staticmethod
     def git_changed():
         """Compares DB_VULNS_GIT_UPDATED and DB_VULNS_GIT"""
-        if DB_VULNS_GIT_UPDATED:
-            json_db_initial = json.loads(
-                open(DB_VULNS_GIT, 'r').read())["_default"]
-            json_db_updated = json.loads(open(DB_VULNS_GIT_UPDATED, 'r').read())[
-                "_default"]
-            return json_db_updated != json_db_initial
-        else:
+        try:
+            if DB_VULNS_GIT_UPDATED:
+                json_db_initial = json.loads(
+                    open(DB_VULNS_GIT, 'r').read())["_default"]
+                json_db_updated = json.loads(open(DB_VULNS_GIT_UPDATED, 'r').read())["_default"]
+                return json_db_updated != json_db_initial
+        except FileNotFoundError as err:
+            print(err)
+
             return False
 
     def timer_vulnerabilities(self):
@@ -118,31 +117,23 @@ class Git(QObject):
         diffs = None
         while True:
             self.git_update()
-            for window in self.app.topLevelWidgets():
-                if window.windowTitle() == "Repator":
-                    repator = window
-                elif window.windowTitle() == "Diffs":
-                    diffs = window
-            if self.git_reachable:
-                Git.update_changes_button_colors(repator, diffs)
             time.sleep(REFRESH_RATE)
 
-    @staticmethod
-    def update_changes_button_colors(repator, diffs):
+    def update_changes_button_colors(self, repator, diffs):
         """Updates View changes and refresh colors"""
-        if not repator.dismiss_changes and Git.vulnerabilities_changed():
-            if diffs and diffs.isVisible():
-                if Git.git_changed():
-                    diffs.layout().itemAt(0).widget().widget(0).widget.layout().itemAt(
-                        3).widget().setStyleSheet("QPushButton { background-color : red }")
-                else:
-                    diffs.layout().itemAt(0).widget().widget(0).widget.layout().itemAt(
-                        3).widget().setStyleSheet("QPushButton { background-color : light gray }")
-            repator.layout().itemAt(3).widget().setStyleSheet(
-                "QPushButton { background-color : red }")
+        view_change_button = repator.layout().itemAt(3).widget()
+        if self.vulnerabilities_changed(): # if the vulnerabilities  aren't hidden
+            view_change_button.setStyleSheet(
+                "QPushButton { background-color : orange }")
         else:
-            repator.layout().itemAt(3).widget().setStyleSheet(
+            view_change_button.setStyleSheet(
                 "QPushButton { background-color : light gray }")
+
+        git_connection = repator.layout().itemAt(5).widget()
+        if self.git_reachable:
+            git_connection.setStyleSheet("QLabel { background-color : green }")
+        else:
+            git_connection.setStyleSheet("QLabel { background-color : red }")
 
     def refresh(self):
         """Updates git file and refreshes "Diffs" window"""
@@ -151,11 +142,19 @@ class Git(QObject):
                 target=self.git_update, daemon=True)
             self.background_update.start()
         for window in self.app.topLevelWidgets():
-            if window.windowTitle() == "Diffs" and self.git_reachable:
-                copyfile(DB_VULNS_GIT_UPDATED, DB_VULNS_GIT)
+            if window.windowTitle() == "Diffs":
                 window.refresh_tab_widget()
 
     def git_routine(self):
         """Sets up the git subprocess"""
         self.init_git()
         self.background_thread.start()
+
+    def git_upload(self):
+        """
+        Uploads to the repo the updated file (vulns)
+        """
+        self.repo.index.add(DB_VULNS_GIT_FILE)
+        self.repo.index.commit('Commit auto')
+        self.repo.remote().pull('master')
+        self.repo.remote().push('master')

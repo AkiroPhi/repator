@@ -4,8 +4,8 @@
 from collections import OrderedDict
 from copy import copy
 
-from PyQt5.QtWidgets import QWidget, QTabWidget, QPushButton, QGridLayout, QFileDialog
-from PyQt5.QtCore import QCoreApplication
+from PyQt5.QtWidgets import QWidget, QTabWidget, QPushButton, QGridLayout, QFileDialog, QLabel
+from PyQt5.QtCore import QCoreApplication, Qt
 
 from conf.ui_vulns_initial import VULNS_INITIAL, add_vuln_initial
 from src.dbhandler import DBHandler
@@ -48,16 +48,20 @@ class Window(QWidget):
         view_changes_btn.clicked.connect(self.view_changes)
         generate_btn = QPushButton("Generate", self)
         generate_btn.clicked.connect(self.generate)
+        git_text = QLabel("Git connection", self)
+        git_text.setAlignment(Qt.AlignCenter)
 
         self.grid = QGridLayout()
         self.grid.setSpacing(5)
         self.grid.setContentsMargins(5, 5, 5, 5)
 
-        self.grid.addWidget(tabw, 0, 0, 1, 4)
+        self.grid.addWidget(tabw, 0, 0, 1, 5)
         self.grid.addWidget(save_btn, 1, 0)
         self.grid.addWidget(load_btn, 1, 1)
         self.grid.addWidget(view_changes_btn, 1, 2)
         self.grid.addWidget(generate_btn, 1, 3)
+        self.grid.addWidget(git_text, 1, 4)
+
 
         self.setLayout(self.grid)
 
@@ -129,7 +133,7 @@ class Window(QWidget):
         """Opens the window "Diffs"."""
         # NB: the windows "Diffs" will close when editing in "Repator" if
         # nothing has been opened in it.
-        tab_lst = copy(VULNS_INITIAL), DBHandler.vulns_initial(
+        tab_lst = copy(VULNS_INITIAL), DBHandler.vulns(
         ), DBHandler.vulns_git(), add_vuln_initial
         for window in self.app.topLevelWidgets():
             if window.windowTitle() == "Diffs" and window.isVisible():
