@@ -2,7 +2,8 @@
 # coding=utf-8
 from shutil import rmtree
 from git import Repo, GitCommandError
-from os import mkdir
+from os import mkdir, chmod, unlink
+from stat import S_IWRITE
 
 from subprocess import Popen, PIPE
 from re import findall
@@ -42,8 +43,12 @@ class Git(QObject):
 
     def clean_git(self):
         """Removes the git file (the thread doesn't need to be killed since it is deamonized)."""
+        def on_rm_error(func, path, exc_info):
+            chmod(path, S_IWRITE)
+            unlink(path)
+
         try:
-            rmtree(DB_VULNS_GIT_DIR)
+            rmtree(DB_VULNS_GIT_DIR, onerror=on_rm_error)
         except FileNotFoundError:
             pass
 
