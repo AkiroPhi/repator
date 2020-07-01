@@ -321,7 +321,10 @@ class Tab(QScrollArea):
                     self.fields["isVuln-" +
                                 doc_id].setCurrentText(value["status"])
                 for name_field in value.keys():
-                    if name_field + "-" + doc_id in self.fields:
+
+                    # Change the text of each field found in the tab
+                    if name_field + "-" + doc_id in self.fields and \
+                            not isinstance(self.fields[name_field + "-" + doc_id], dict):
                         self.fields[name_field + "-" + doc_id].setText(value[name_field])
 
             elif name in self.fields:
