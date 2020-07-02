@@ -301,6 +301,10 @@ class Tab(QScrollArea):
                 if self.add_fct is not None and \
                         (name not in self.lst_loaded and self.database.search_by_id(int(doc_id)) is None)\
                         or (name in self.lst_loaded and self.database.search_by_id(int(self.lst_loaded[name])) is None):
+                    keys = [key for key in value.keys()]
+                    for key in keys:
+                        if key not in self.database.default_values:
+                            del value[key]
                     doc_id = self.database.insert_record(value)
 
                     lst = OrderedDict()
@@ -322,8 +326,9 @@ class Tab(QScrollArea):
 
                     # Updates the fields corresponding to the value
                     for keys in value:
-                        if keys in vuln and vuln[keys] != value[keys]:
+                        if keys in self.database.default_values and keys in vuln and vuln[keys] != value[keys]:
                             is_updated = True
+                            print(keys)
                             self.database.update(int(name), keys, value[keys])
 
                     # If a field has been updated, the icon and button script is also updated
@@ -358,7 +363,7 @@ class Tab(QScrollArea):
         for ident, value in self.fields.items():
             if isinstance(value, SortButton):
                 value.update_values()
-        self.updateField.emit(self, True)
+        self.updateField.emit(None, False)
 
     def save(self, database=False):
         """Saves the values of lst into self.values and takes the values from the database to save

@@ -147,7 +147,10 @@ class Window(QWidget):
         window.showMaximized()
 
     def set_modified(self, tab, value):
-        self.tab_is_modified[tab] = value
+        if tab is None:
+            self.tab_is_modified.clear()
+        else:
+            self.tab_is_modified[tab] = value
 
     def closeEvent(self, event):
         have_been_modified = False

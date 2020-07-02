@@ -34,7 +34,7 @@
       "script": "",
       "sub_category": ""
     },
-    "6": {
+    "2": {
       "A": "High",
       "AC": "High",
       "AV": "Physical",
@@ -76,7 +76,7 @@
       "script": "ls -l",
       "sub_category": "User input validation"
     },
-    "7": {
+    "3": {
       "A": "High",
       "AC": "Low",
       "AV": "Network",
@@ -115,7 +115,7 @@
       "script": "ls -l",
       "sub_category": "User input validation"
     },
-    "8": {
+    "4": {
       "A": "High",
       "AC": "High",
       "AV": "Adjacent",
