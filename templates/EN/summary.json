@@ -4,7 +4,7 @@
     "content": [
 		{
 			"type": "Normal",
-            "filter": "Mission",
+            "filer": "Mission",
 			"content": "This is the summary of ##target## mission."
 		},
         {
