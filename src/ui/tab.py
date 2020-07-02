@@ -1,6 +1,7 @@
 """Module that generates the different tab types"""
 
 # coding=utf-8
+import os
 from collections import OrderedDict, defaultdict
 from re import sub
 
@@ -265,9 +266,9 @@ class Tab(QScrollArea):
         # Creates a .json containing auditors and clients
         # Updates currents auditors and clients
         if self.database is not None and "db" in values:
-            creation_date = QDateTime.currentDateTime().toString("yyyyMMdd-hhmmss")
-            db_path = self.database.path + "-tmp-" + creation_date + ".json"
+            db_path = self.database.path
             default_values = self.database.default_values
+            os.remove(db_path)
             self.database.close()
             self.database = DBHandler(db_path, default_values)
             self.database.insert_multiple(values["db"])

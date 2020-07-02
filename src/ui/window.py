@@ -106,16 +106,18 @@ class Window(QWidget):
             values[tabname] = tab.save(database=False)
 
         # Adding images in values to generation
-        for idents, elem in self.tabs["Vulns"].lst["vulns"]["arg"][0].items():
+        lst = self.tabs["Vulns"].lst["vulns"]["arg"][0]
+        for idents, elem in lst.items():
             field = idents.split("-")
-            if "imagesPath" in field[0]:
-                values["Vulns"][field[1]]["imagesPath"] = elem
+            if len(field) > 1 and field[1] in values["Vulns"]:
+                if "imagesPath" in field[0]:
+                    values["Vulns"][field[1]]["imagesPath"] = elem
 
-            if "imagesText" in field[0]:
-                values["Vulns"][field[1]]["imagesText"] = elem
+                if "imagesText" in field[0]:
+                    values["Vulns"][field[1]]["imagesText"] = elem
 
-            if "imagesHistory" in field[0]:
-                values["Vulns"][field[1]]["imagesHistory"] = elem
+                if "imagesHistory" in field[0]:
+                    values["Vulns"][field[1]]["imagesHistory"] = elem
 
         # Removing db from values
         for name, value in values.items():
