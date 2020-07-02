@@ -166,6 +166,7 @@ class Window(QWidget):
         if not have_been_modified or close == QMessageBox.Yes:
             QApplication.instance().closeAllWindows()
         elif close == QMessageBox.SaveAll:
+            self.save()
             QApplication.instance().closeAllWindows()
         else:
             try:

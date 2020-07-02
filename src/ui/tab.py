@@ -328,7 +328,6 @@ class Tab(QScrollArea):
                     for keys in value:
                         if keys in self.database.default_values and keys in vuln and vuln[keys] != value[keys]:
                             is_updated = True
-                            print(keys)
                             self.database.update(int(name), keys, value[keys])
 
                     # If a field has been updated, the icon and button script is also updated
