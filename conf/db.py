@@ -14,21 +14,21 @@ DB_VULNS_GIT_UPDATED = DB_VULNS_GIT_DIR + DB_VULNS_GIT_FILE
 
 
 DB_AUDITORS_DEFAULT = collections.OrderedDict()
-DB_AUDITORS_DEFAULT["full_name"] = "Dummy name"
-DB_AUDITORS_DEFAULT["phone"] = "+33 1 23 45 67 89"
-DB_AUDITORS_DEFAULT["email"] = "dummy.name@email.com"
-DB_AUDITORS_DEFAULT["role"] = "Pentester"
+DB_AUDITORS_DEFAULT["full_name"] = ""
+DB_AUDITORS_DEFAULT["phone"] = "+33"
+DB_AUDITORS_DEFAULT["email"] = ""
+DB_AUDITORS_DEFAULT["role"] = ""
 
 DB_CLIENTS_DEFAULT = collections.OrderedDict()
-DB_CLIENTS_DEFAULT["full_name"] = "Dummy name"
-DB_CLIENTS_DEFAULT["phone"] = "+33 1 23 45 67 89"
-DB_CLIENTS_DEFAULT["email"] = "dummy.name@email.com"
-DB_CLIENTS_DEFAULT["role"] = "CISO"
+DB_CLIENTS_DEFAULT["full_name"] = ""
+DB_CLIENTS_DEFAULT["phone"] = "+33"
+DB_CLIENTS_DEFAULT["email"] = ""
+DB_CLIENTS_DEFAULT["role"] = ""
 
 DB_VULNS_DEFAULT = collections.OrderedDict()
 DB_VULNS_DEFAULT["category"] = ""
 DB_VULNS_DEFAULT["sub_category"] = ""
-DB_VULNS_DEFAULT["name"] = "Dummy name"
+DB_VULNS_DEFAULT["name"] = ""
 DB_VULNS_DEFAULT["labelNeg"] = ""
 DB_VULNS_DEFAULT["labelPos"] = ""
 DB_VULNS_DEFAULT["observNeg"] = ""

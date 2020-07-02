@@ -1,10 +1,10 @@
 {
   "_default": {
     "1": {
-      "full_name": "Dummy name",
-      "phone": "+33 1 23 45 67 89",
-      "email": "dummy.name@email.com",
-      "role": "CISO"
+      "full_name": "",
+      "phone": "+33",
+      "email": "",
+      "role": ""
     },
     "2": {
       "full_name": "John Doe",
