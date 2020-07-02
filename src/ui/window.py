@@ -4,7 +4,8 @@
 from collections import OrderedDict
 from copy import copy
 
-from PyQt5.QtWidgets import QWidget, QTabWidget, QPushButton, QGridLayout, QFileDialog, QLabel, QMessageBox
+from PyQt5.QtWidgets import QWidget, QTabWidget, QPushButton, QGridLayout, QFileDialog, QLabel, QMessageBox, \
+    QApplication
 from PyQt5.QtCore import QCoreApplication, Qt
 
 from conf.ui_vulns_initial import VULNS_INITIAL, add_vuln_initial
@@ -160,9 +161,9 @@ class Window(QWidget):
                                          "Changes have been occurred.\nDo you want to quit without saving?",
                                          QMessageBox.Yes | QMessageBox.SaveAll | QMessageBox.No)
         if not have_been_modified or close == QMessageBox.Yes:
-            event.accept()
+            QApplication.instance().closeAllWindows()
         elif close == QMessageBox.SaveAll:
-            self.save()
+            QApplication.instance().closeAllWindows()
         else:
             try:
                 event.ignore()
