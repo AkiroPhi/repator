@@ -5,7 +5,7 @@ import os
 from collections import OrderedDict, defaultdict
 from re import sub
 
-from PyQt5.QtCore import QDateTime, Qt, QDate, pyqtSignal
+from PyQt5.QtCore import Qt, QDate, pyqtSignal
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtWidgets import QScrollArea, QGridLayout, QWidget, QLabel, QLineEdit, QDateEdit, QDialog
 
@@ -23,6 +23,9 @@ from src.ui.history import History
 
 class Tab(QScrollArea):
     """Class that contains the attributes of a tab for repator, diffs and repator->Vulns."""
+
+    # Whenever a tab field is modified, transmits an 'updateField' signal
+    updateField = pyqtSignal(QScrollArea, bool, name="updateField")
 
     def __init__(self, parent, lst, database=None, add_fct=None):
         super().__init__(parent)
@@ -81,9 +84,12 @@ class Tab(QScrollArea):
             string = string.toHtml()
 
         self.values[field] = string
+        self.updateField.emit(self, True)
 
     def update_vuln(self, string=None):
         """Updates the database value of the sender and updates the fields values accordingly."""
+        tab_Vulns = self.get_parent(self.sender()).tabs["Vulns"]
+        tab_Vulns.updateField.emit(tab_Vulns, True)
 
         # If the tab is not completely initialized, we do not update since the values are already up to date
         if hasattr(self, 'initialized'):
@@ -124,6 +130,7 @@ class Tab(QScrollArea):
             return
 
         sender.tabs["All"].fields["buttonScript-" + doc_id].setEnabled(len(string) > 0)
+        self.updateField.emit(self, True)
 
     def load_history(self, index):
         """Writes the string into the non-History field of the sender."""
@@ -183,6 +190,7 @@ class Tab(QScrollArea):
         """Calls the parent function that updates the History field."""
         self._parent.update_history(self.sender().accessibleName(),
                                     self, index)
+        self.updateField.emit(self, True)
 
     def update_cvss(self, doc_id):
         """Computes the CVSS scores from the field values and writes it into the corresponding
@@ -256,6 +264,7 @@ class Tab(QScrollArea):
             string = string.toHtml()
 
         self.database.update(int(field_tab[1]), field_tab[0], string)
+        self.updateField.emit(self, True)
 
     def load(self, values):
         """Loads values into the database and displays it on the screen."""
@@ -349,6 +358,7 @@ class Tab(QScrollArea):
         for ident, value in self.fields.items():
             if isinstance(value, SortButton):
                 value.update_values()
+        self.updateField.emit(self, True)
 
     def save(self, database=False):
         """Saves the values of lst into self.values and takes the values from the database to save
@@ -377,6 +387,7 @@ class Tab(QScrollArea):
 
         if database and self.database is not None:
             self.values["db"] = self.database.get_all()
+        self.updateField.emit(self, False)
         return self.values
 
     def edit_vuln(self):
@@ -443,6 +454,8 @@ class Tab(QScrollArea):
             del self.values[doc_id]
         self.database.delete(int(doc_id))
         self.fields["categorySort"].update_values()
+        tab_Vulns = self.get_parent(self).tabs["Vulns"]
+        tab_Vulns.updateField.emit(tab_Vulns, True)
 
     def add_vuln(self):
         """Adds a vuln to the database and displays it as a newly added vuln."""
@@ -455,6 +468,8 @@ class Tab(QScrollArea):
         self.fields["buttonScript-" + str(doc_id)].setEnabled(False)
         self.fields["categorySort"].connect_buttons(doc_id)
         self.fields["diff-" + str(doc_id)].added()
+        tab_Vulns = self.get_parent(self).tabs["Vulns"]
+        tab_Vulns.updateField.emit(tab_Vulns, True)
 
     def status_vuln(self):
         """Calculates the status of the selected vulnerability.
@@ -483,6 +498,7 @@ class Tab(QScrollArea):
         self.parse_lst(lst)
         for ident, field in lst.items():
             self.lst[ident] = field
+        self.updateField.emit(self, True)
 
     def add_image(self, index, name):
         """Adds image to the internal storage of the 'all' tab."""
@@ -503,6 +519,7 @@ class Tab(QScrollArea):
                 text_name_lst = text_name_lst.replace(lang, "")
         tab_all.lst[path_name_lst]["value"] += [name]
         tab_all.lst[text_name_lst]["value"] += [""]
+        self.updateField.emit(self, True)
 
     def remove_image(self, index):
         """Removes the index image of the internal storage of the 'all' tab."""
@@ -524,6 +541,7 @@ class Tab(QScrollArea):
                 text_name_lst = text_name_lst.replace(lang, "")
         del tab_all.lst[path_name_lst]["value"][index_images]
         del tab_all.lst[text_name_lst]["value"][index_images]
+        self.updateField.emit(self, True)
 
     def modify_image(self, index, name, string):
         """Modifies the index image of the internal storage of the 'all' tab."""
@@ -544,6 +562,7 @@ class Tab(QScrollArea):
                 text_name_lst = text_name_lst.replace(lang, "")
         tab_all.lst[path_name_lst]["value"][index_images] = name
         tab_all.lst[text_name_lst]["value"][index_images] = string
+        self.updateField.emit(self, True)
 
     def get_parent(self, parent, name=None, firstAccessibleName=False):
         """Internal method returning the parent with accessible name 'name'.
@@ -585,6 +604,7 @@ class Tab(QScrollArea):
                             doc_id].setCurrentText(result[0])
             elif dispay_popup_error and (result is None or not result[0] in self.valid_status_vuln):
                 self.display_error_test(result)
+        self.updateField.emit(self, True)
 
     def display_help_var(self):
         """Displays a popup with all availables variables"""
@@ -648,6 +668,7 @@ class Tab(QScrollArea):
                     selected = True
 
             if selected:
+                self.updateField.emit(self, True)
                 for row in range(1, self.row + 1):
                     if self.grid.itemAtPosition(row, 0) is not None:
                         if self.grid.itemAtPosition(row, 0).widget().accessibleName() == ident:

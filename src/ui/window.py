@@ -4,7 +4,7 @@
 from collections import OrderedDict
 from copy import copy
 
-from PyQt5.QtWidgets import QWidget, QTabWidget, QPushButton, QGridLayout, QFileDialog, QLabel
+from PyQt5.QtWidgets import QWidget, QTabWidget, QPushButton, QGridLayout, QFileDialog, QLabel, QMessageBox
 from PyQt5.QtCore import QCoreApplication, Qt
 
 from conf.ui_vulns_initial import VULNS_INITIAL, add_vuln_initial
@@ -29,6 +29,7 @@ class Window(QWidget):
 
         tabw = QTabWidget()
         self.tabs = {}
+        self.tab_is_modified = {}
 
         for label, tab in tab_lst.items():
             if "add_fct" in tab:
@@ -38,6 +39,7 @@ class Window(QWidget):
                 self.tabs[label] = Tab(tabw, tab["lst"], tab["db"])
             else:
                 self.tabs[label] = Tab(tabw, tab)
+            self.tabs[label].updateField.connect(self.set_modified)
             tabw.addTab(self.tabs[label], label)
 
         save_btn = QPushButton("Save", self)
@@ -61,7 +63,6 @@ class Window(QWidget):
         self.grid.addWidget(view_changes_btn, 1, 2)
         self.grid.addWidget(generate_btn, 1, 3)
         self.grid.addWidget(git_text, 1, 4)
-
 
         self.setLayout(self.grid)
 
@@ -143,3 +144,27 @@ class Window(QWidget):
                 return
         window = VulnsGit("Diffs", tab_lst)
         window.showMaximized()
+
+    def set_modified(self, tab, value):
+        self.tab_is_modified[tab] = value
+
+    def closeEvent(self, event):
+        have_been_modified = False
+        for value in self.tab_is_modified.values():
+            if value:
+                have_been_modified = True
+
+        if have_been_modified:
+            close = QMessageBox.question(self,
+                                         "QUIT",
+                                         "Changes have been occurred.\nDo you want to quit without saving?",
+                                         QMessageBox.Yes | QMessageBox.SaveAll | QMessageBox.No)
+        if not have_been_modified or close == QMessageBox.Yes:
+            event.accept()
+        elif close == QMessageBox.SaveAll:
+            self.save()
+        else:
+            try:
+                event.ignore()
+            except:
+                pass
