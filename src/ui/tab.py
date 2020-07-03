@@ -384,8 +384,12 @@ class Tab(QScrollArea):
 
         if "vulns" in self.fields:
             self.values = self.fields["vulns"].save()
+            for ident, elem in self.lst["vulns"]["arg"][0].items():
+                field = ident.split("-")
+                if len(field) > 1 and field[0].startswith("images") and field[1] in self.values:
+                    self.values[field[1]][field[0]] = elem
             self.values = OrderedDict(
-                sorted(self.fields["vulns"].save().items()))
+                sorted(self.values.items()))
 
         if database and self.database is not None:
             self.values["db"] = self.database.get_all()
