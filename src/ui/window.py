@@ -5,7 +5,7 @@ from collections import OrderedDict
 from copy import copy
 
 from PyQt5.QtWidgets import QWidget, QTabWidget, QPushButton, QGridLayout, QFileDialog, QLabel, QMessageBox, \
-    QApplication
+    QApplication, QAction
 from PyQt5.QtCore import QCoreApplication, Qt
 
 from conf.ui_vulns_initial import VULNS_INITIAL, add_vuln_initial
@@ -100,6 +100,8 @@ class Window(QWidget):
         if project_filename:
             with open(project_filename, 'w') as project_file:
                 project_file.write(json.dumps(values))
+                return True
+        return False
 
     def generate(self):
         """Launches the docx report generation."""
@@ -167,8 +169,11 @@ class Window(QWidget):
             if not have_been_modified or close == QMessageBox.Yes:
                 QApplication.instance().closeAllWindows()
             elif close == QMessageBox.Save:
-                self.save()
-                QApplication.instance().closeAllWindows()
+                if not self.save():
+                    self.tab_is_modified["dataNotSaved"] = True
+                    event.ignore()
+                else:
+                    QApplication.instance().closeAllWindows()
             else:
                 event.ignore()
         except:
