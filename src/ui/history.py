@@ -49,14 +49,12 @@ class History(QComboBox):
         """
         Remove item at row in the model and the database.
         """
-        value = self.model().item(row).text() # by default column is 0
-        self.model().removeRow(row)
         database = self._parent.database
         history_field_name = self.accessibleName()
         field_tab = history_field_name.split('-')
         field_name = history_field_name.replace("History", "")
         history = database.search_by_id(int(field_tab[1]))[field_tab[0]]
-        history.remove(value)
+        history.pop(row)
         database.update(int(field_tab[1]), field_tab[0], history)
 
     def dealWithPressEvent(self, index):
