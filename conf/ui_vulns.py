@@ -78,6 +78,7 @@ def add_vuln(lst, doc_id, vuln):
                                     "signal": "currentTextChanged",
                                     "signalFct": "enable_row",
                                     "items": ("NA", "TODO", "Not Vulnerable", "Vulnerable"),
+                                    "sendSignal": ["updateField"],
                                     "col": 5}
     lst["buttonScript-" + str(doc_id)] = {"class": QPushButton,
                                           "clicked": "status_vuln",

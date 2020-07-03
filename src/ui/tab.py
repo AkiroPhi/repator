@@ -88,8 +88,6 @@ class Tab(QScrollArea):
 
     def update_vuln(self, string=None):
         """Updates the database value of the sender and updates the fields values accordingly."""
-        tab_Vulns = self.get_parent(self.sender()).tabs["Vulns"]
-        tab_Vulns.updateField.emit(tab_Vulns, True)
 
         # If the tab is not completely initialized, we do not update since the values are already up to date
         if hasattr(self, 'initialized'):
@@ -130,7 +128,6 @@ class Tab(QScrollArea):
             return
 
         sender.tabs["All"].fields["buttonScript-" + doc_id].setEnabled(len(string) > 0)
-        self.updateField.emit(self, True)
 
     def load_history(self, index):
         """Writes the string into the non-History field of the sender."""
@@ -190,7 +187,6 @@ class Tab(QScrollArea):
         """Calls the parent function that updates the History field."""
         self._parent.update_history(self.sender().accessibleName(),
                                     self, index)
-        self.updateField.emit(self, True)
 
     def update_cvss(self, doc_id):
         """Computes the CVSS scores from the field values and writes it into the corresponding
@@ -264,7 +260,6 @@ class Tab(QScrollArea):
             string = string.toHtml()
 
         self.database.update(int(field_tab[1]), field_tab[0], string)
-        self.updateField.emit(self, True)
 
     def load(self, values):
         """Loads values into the database and displays it on the screen."""
@@ -301,9 +296,10 @@ class Tab(QScrollArea):
                 if self.add_fct is not None and \
                         (name not in self.lst_loaded and self.database.search_by_id(int(doc_id)) is None)\
                         or (name in self.lst_loaded and self.database.search_by_id(int(self.lst_loaded[name])) is None):
-                    keys = [key for key in value.keys()]
+                    status = value["status"] if "status" in value else None
+                    keys = [key + lang for lang in LANGUAGES + [""] for key in value.keys()]
                     for key in keys:
-                        if key not in self.database.default_values:
+                        if key not in self.database.default_values and key in value:
                             del value[key]
                     doc_id = self.database.insert_record(value)
 
@@ -312,6 +308,9 @@ class Tab(QScrollArea):
                     self.parse_lst(lst)
                     for ident, field in lst.items():
                         self.lst[ident] = field
+                    if status is not None:
+                        self.fields["isVuln-" + str(doc_id)].setCurrentIndex(
+                            self.fields["isVuln-" + str(doc_id)].findText(status))
                     self.fields["buttonScript-" + str(doc_id)].setEnabled(len(value["script"]) > 0)
                     self.fields["categorySort"].connect_buttons(doc_id)
                     self.fields["diff-" + str(doc_id)].added()
@@ -391,7 +390,7 @@ class Tab(QScrollArea):
 
         if database and self.database is not None:
             self.values["db"] = self.database.get_all()
-        self.updateField.emit(self, False)
+        self.updateField.emit(None, False)
         return self.values
 
     def edit_vuln(self):
@@ -459,7 +458,6 @@ class Tab(QScrollArea):
         self.database.delete(int(doc_id))
         self.fields["categorySort"].update_values()
         tab_Vulns = self.get_parent(self).tabs["Vulns"]
-        tab_Vulns.updateField.emit(tab_Vulns, True)
 
     def add_vuln(self):
         """Adds a vuln to the database and displays it as a newly added vuln."""
@@ -473,7 +471,6 @@ class Tab(QScrollArea):
         self.fields["categorySort"].connect_buttons(doc_id)
         self.fields["diff-" + str(doc_id)].added()
         tab_Vulns = self.get_parent(self).tabs["Vulns"]
-        tab_Vulns.updateField.emit(tab_Vulns, True)
 
     def status_vuln(self):
         """Calculates the status of the selected vulnerability.
@@ -502,7 +499,6 @@ class Tab(QScrollArea):
         self.parse_lst(lst)
         for ident, field in lst.items():
             self.lst[ident] = field
-        self.updateField.emit(self, True)
 
     def add_image(self, index, name):
         """Adds image to the internal storage of the 'all' tab."""
@@ -608,7 +604,8 @@ class Tab(QScrollArea):
                             doc_id].setCurrentText(result[0])
             elif dispay_popup_error and (result is None or not result[0] in self.valid_status_vuln):
                 self.display_error_test(result)
-        self.updateField.emit(self, True)
+        tab_Vulns = self.get_parent(self.sender()).tabs["Vulns"]
+        tab_Vulns.updateField.emit(tab_Vulns, True)
 
     def display_help_var(self):
         """Displays a popup with all availables variables"""
@@ -672,7 +669,6 @@ class Tab(QScrollArea):
                     selected = True
 
             if selected:
-                self.updateField.emit(self, True)
                 for row in range(1, self.row + 1):
                     if self.grid.itemAtPosition(row, 0) is not None:
                         if self.grid.itemAtPosition(row, 0).widget().accessibleName() == ident:
@@ -759,6 +755,9 @@ class Tab(QScrollArea):
                                 self.set_signal(widget, field["signal"], field["signalFct"])
                         else:
                             getattr(widget, field["signal"]).connect(self.change_value)
+                        if "sendSignal" in field:
+                            for dest in field["sendSignal"]:
+                                getattr(widget, field["signal"]).connect(getattr(self, "send_" + dest))
 
                 if "list" in field:
                     for line in field["list"]["lines"]:
@@ -863,6 +862,10 @@ class Tab(QScrollArea):
     def set_signal(self, widget, signal, signal_fct):
         getattr(widget, signal).connect(getattr(self, signal_fct))
 
+    def send_updateField(self, string=None):
+        if string in self.valid_status_vuln:
+            tab_Vulns = self.get_parent(self.sender()).tabs["Vulns"]
+            tab_Vulns.updateField.emit(tab_Vulns, True)
 
 class ClickableQWidget(QWidget):
     def __init(self, parent):
