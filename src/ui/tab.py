@@ -18,7 +18,6 @@ from src.cvss import cvssv3, risk_level
 from src.dbhandler import DBHandler
 from src.ui.diff_status import DiffStatus
 from src.ui.sort_button import SortButton
-from src.ui.history import History
 
 
 class Tab(QScrollArea):

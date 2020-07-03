@@ -5,7 +5,7 @@ from collections import OrderedDict
 from copy import copy
 
 from PyQt5.QtWidgets import QWidget, QTabWidget, QPushButton, QGridLayout, QFileDialog, QLabel, QMessageBox, \
-    QApplication, QAction
+    QApplication
 from PyQt5.QtCore import QCoreApplication, Qt
 
 from conf.ui_vulns_initial import VULNS_INITIAL, add_vuln_initial

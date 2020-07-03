@@ -4,7 +4,7 @@
 
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtWidgets import QWidget, QPushButton, QFileDialog, QGridLayout, QLabel, \
-    QComboBox, QScrollArea
+    QScrollArea
 
 from src.ui.history import History
 from src.ui.rich_text_edit import RichTextEdit
