@@ -23,14 +23,20 @@ MISSION["code"] = {"label": "Code",
 MISSION["dateStart"] = {"label": "Start date",
                         "class": QDateEdit,
                         "signal": "dateChanged",
-                        "arg": QDate.currentDate()}
+                        "setDate": QDate.currentDate()}
 MISSION["dateEnd"] = {"label": "End date",
                       "class": QDateEdit,
                       "signal": "dateChanged",
-                      "arg": QDate.currentDate()}
+                      "setDate": QDate.currentDate()}
 MISSION["environment"] = {"label": "Environment",
                           "class": QLineEdit,
                           "signal": "textChanged"}
+MISSION["url"] = {"label": "URL",
+                  "class": QLineEdit,
+                  "signal": "textChanged"}
+MISSION["ip"] = {"label": "IP",
+                 "class": QLineEdit,
+                 "signal": "textChanged"}
 MISSION["template"] = {"label": "Template",
                        "class": QComboBox,
                        "signal": "currentTextChanged",

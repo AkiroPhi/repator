@@ -59,6 +59,17 @@ class Generator:
 
     @staticmethod
     def __sub_dict(dic, text):
+        if "##images##" in text:
+            text_images = ""
+            imagesPath = dic["imagesPath"]["value"]
+            imagesText = dic["imagesText"]["value"]
+            for index in range(len(imagesText)):
+                text_with_image = \
+                    "[[IMAGE]]" + imagesPath[index] + "||3[[/IMAGE]]\n" + imagesText[index]
+                text_images += text_with_image + "\n"
+            text = text_images
+            return text
+
         for name, value in dic.items():
             if isinstance(value, str):
                 text = re.sub("##" + name + "##", value, text)

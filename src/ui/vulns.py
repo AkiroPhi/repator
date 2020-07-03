@@ -82,8 +82,23 @@ class Vulns(QWidget):
 
     def load(self, values):
         """Tab load."""
+        for idents, elem in values.items():
+
+            # To avoid crashing the application if it is a backup before the update allowing images
+            if "imagesPath" in elem:
+                self.tabs["All"].lst["imagesPath-"+idents] = elem["imagesPath"]
+                self.tabs["All"].lst["imagesText-"+idents] = elem["imagesText"]
+                self.tabs["All"].lst["imagesHistory-"+idents] = elem["imagesHistory"]
         return self.tabs["All"].load(values)
 
     def save(self):
         """Tab save."""
-        return self.tabs["All"].save()
+        db = self.tabs["All"].save()
+        for idents, elem in db.items():
+
+            # To avoid crashing the application if it is a backup before the update allowing images
+            if "imagesPath-"+idents in elem:
+                elem["imagesPath"] = self.tabs["All"].lst["imagesPath-"+idents]
+                elem["imagesText"] = self.tabs["All"].lst["imagesText-"+idents]
+                elem["imagesHistory"] = self.tabs["All"].lst["imagesHistory-"+idents]
+        return db

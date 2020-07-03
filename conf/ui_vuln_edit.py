@@ -6,6 +6,7 @@ import collections
 
 from PyQt5.QtWidgets import QLabel, QLineEdit, QComboBox
 
+from src.ui.image_chooser import ImagesChooser
 from src.ui.rich_text_edit import RichTextEdit
 from src.ui.history import History
 
@@ -124,6 +125,35 @@ def vuln_editing(doc_id, vuln, lang=""):
         "signalFct": "update_vuln",
         "arg": vuln["reco"+lang].replace("\n", "<br/>") if vuln["reco"+lang] else (
             vuln["reco"].replace("\n", "<br/>"))
+    }
+    lst["images"+lang+"-" + str(doc_id)] = {
+        "class": ImagesChooser,
+        "label": "Images",
+        "signal": ["creationImage", "deletionImage", "modificationImage"],
+        "signalFct": ["add_image", "remove_image", "modify_image"]
+    }
+    lst["script"+lang+"-" + str(doc_id)] = {
+        "class": QLineEdit,
+        "label": "Status script",
+        "signal": "textChanged",
+        "signalFct": ["update_vuln", "update_button"],
+        "help": "display_help_var",
+        "helpLogo": "img/help.png",
+        "arg": vuln["script"+lang] if vuln["script"+lang] else vuln["script"]
+    }
+    lst["regexVuln"+lang+"-" + str(doc_id)] = {
+        "class": QLineEdit,
+        "label": "Regex Vulnerable",
+        "signal": "textChanged",
+        "signalFct": "update_vuln",
+        "arg": vuln["regexVuln"+lang] if vuln["regexVuln"+lang] else vuln["regexVuln"]
+    }
+    lst["regexNotVuln"+lang+"-" + str(doc_id)] = {
+        "class": QLineEdit,
+        "label": "Regex Not Vulnerable",
+        "signal": "textChanged",
+        "signalFct": "update_vuln",
+        "arg": vuln["regexNotVuln"+lang] if vuln["regexNotVuln"+lang] else vuln["regexNotVuln"]
     }
     lst["CVSS"] = {"class": QLabel,
                    "col": 0}
