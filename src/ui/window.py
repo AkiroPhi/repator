@@ -162,14 +162,14 @@ class Window(QWidget):
             close = QMessageBox.question(self,
                                          "QUIT",
                                          "Changes have been occurred.\nDo you want to quit without saving?",
-                                         QMessageBox.Yes | QMessageBox.SaveAll | QMessageBox.No)
-        if not have_been_modified or close == QMessageBox.Yes:
-            QApplication.instance().closeAllWindows()
-        elif close == QMessageBox.SaveAll:
-            self.save()
-            QApplication.instance().closeAllWindows()
-        else:
-            try:
+                                         QMessageBox.Yes | QMessageBox.Save | QMessageBox.No)
+        try:
+            if not have_been_modified or close == QMessageBox.Yes:
+                QApplication.instance().closeAllWindows()
+            elif close == QMessageBox.Save:
+                self.save()
+                QApplication.instance().closeAllWindows()
+            else:
                 event.ignore()
-            except:
-                pass
+        except:
+            pass
