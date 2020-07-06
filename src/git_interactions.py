@@ -13,7 +13,7 @@ from threading import Thread
 from shutil import copyfile
 from PyQt5.QtCore import QCoreApplication, QObject
 from conf.db import DB_VULNS, DB_VULNS_GIT, DB_VULNS_GIT_UPDATED, DB_VULNS_GIT_DIR, DB_VULNS_GIT_FILE
-from conf.report import SSH_KEY, GIT, REFRESH_RATE
+from conf.report import SSH_KEY, GIT, REFRESH_RATE, COMMIT_MESSAGE
 
 
 class Git(QObject):
@@ -91,6 +91,7 @@ class Git(QObject):
                     diffs.refresh_tab_widget()
                     # TODO: add an automatic refresh of the diff window if changed
         except GitCommandError as err:
+            print(err)
             self.git_reachable = False
 
         self.update_changes_buttons(repator, diffs)
@@ -159,14 +160,21 @@ class Git(QObject):
         Uploads to the repo the updated file (vulns)
         """
         self.repo.index.add(DB_VULNS_GIT_FILE)
-        self.repo.index.commit('Commit auto')
+        self.repo.index.commit(COMMIT_MESSAGE)
         self.repo.remote().pull('master')
         try:
             self.repo.remote().push('master')
         except GitCommandError as err:
             if "Authentication failed" in err.stderr:
                 self.undo_last_commit()
+                print("logon failed")
                 return False
             else:
                 raise err
         return True
+
+    def undo_last_commit(self):
+        """
+        Undo the last commit (I wish)
+        """
+        self.repo.head.reset(commit="HEAD~1", working_tree=True)
