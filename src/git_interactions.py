@@ -88,8 +88,9 @@ class Git(QObject):
                 if diffs and diffs.isVisible():
                     refresh_button = diffs.layout().itemAt(0).widget().widget(0).widget.layout().itemAt(3).widget()
                     refresh_button.setStyleSheet("QPushButton { background-color : red }")
-                    diffs.refresh_tab_widget()
                     # TODO: add an automatic refresh of the diff window if changed
+                    # diffs.refresh_tab_widget() --> cause an QObject::setParent: Cannot set parent, new parent is in a different thread
+
         except GitCommandError as err:
             print(err)
             self.git_reachable = False
