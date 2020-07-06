@@ -177,6 +177,7 @@ class VulnsGit(QWidget):
         """Shows the buttons that have to be displayed when in any tab but "All"."""
         self.grid.itemAt(1).widget().hide()
         self.grid.itemAt(2).widget().show()
+        self.buttons["duplicateOneButton"].setEnabled(duplicate)
 
 
     def duplicate_one_vuln(self):

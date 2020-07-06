@@ -13,7 +13,7 @@ from threading import Thread
 from shutil import copyfile
 from PyQt5.QtCore import QCoreApplication, QObject
 from conf.db import DB_VULNS, DB_VULNS_GIT, DB_VULNS_GIT_UPDATED, DB_VULNS_GIT_DIR, DB_VULNS_GIT_FILE
-from conf.report import SSH_KEY, GIT, REFRESH_RATE
+from conf.report import SSH_KEY, GIT, REFRESH_RATE, COMMIT_MESSAGE
 
 
 class Git(QObject):
@@ -35,10 +35,10 @@ class Git(QObject):
     def init_git(self):
         """Initialises the git repository in a new directory."""
         self.clean_git()
+        print("Init Git in " + DB_VULNS_GIT_DIR + "\nurl : " + GIT)
         self.repo = Repo.init(DB_VULNS_GIT_DIR)
-        ssh_cmd = "ssh -i " + SSH_KEY + " -F /dev/null"
-        # self.repo.config_writer('core.sshCommand ' + ssh_cmd)
-        self.repo.git.custom_environment(GIT_SSH_COMMAND=ssh_cmd) # set the config ?
+        ssh_cmd = "ssh -i " + SSH_KEY + " -F /dev/null -o NumberOfPasswordPrompts=0"
+        self.repo.git.update_environment(GIT_SSH_COMMAND=ssh_cmd) # set the config ?
         self.repo.create_remote('origin', url=GIT)
 
     def clean_git(self):
@@ -89,11 +89,13 @@ class Git(QObject):
                     refresh_button = diffs.layout().itemAt(0).widget().widget(0).widget.layout().itemAt(3).widget()
                     refresh_button.setStyleSheet("QPushButton { background-color : red }")
                     # TODO: add an automatic refresh of the diff window if changed
+                    # diffs.refresh_tab_widget() --> cause an QObject::setParent: Cannot set parent, new parent is in a different thread
+
         except GitCommandError as err:
             print(err)
             self.git_reachable = False
 
-        self.update_changes_button_colors(repator, diffs)
+        self.update_changes_buttons(repator, diffs)
         return ret_value
 
 
@@ -119,21 +121,21 @@ class Git(QObject):
             self.git_update()
             time.sleep(REFRESH_RATE)
 
-    def update_changes_button_colors(self, repator, diffs):
+    def update_changes_buttons(self, repator, diffs):
         """Updates View changes and refresh colors"""
         view_change_button = repator.layout().itemAt(3).widget()
-        if self.vulnerabilities_changed(): # if the vulnerabilities  aren't hidden
-            view_change_button.setStyleSheet(
-                "QPushButton { background-color : orange }")
-        else:
-            view_change_button.setStyleSheet(
-                "QPushButton { background-color : light gray }")
-
         git_connection = repator.layout().itemAt(5).widget()
         if self.git_reachable:
-            git_connection.setStyleSheet("QLabel { background-color : green }")
+            git_connection.setStyleSheet("QPushButton { background-color : green }")
+            view_change_button.setEnabled(True)
+            if self.vulnerabilities_changed(): # if the vulnerabilities  aren't hidden
+                view_change_button.setStyleSheet(
+                    "QPushButton { background-color : orange }")
         else:
-            git_connection.setStyleSheet("QLabel { background-color : red }")
+            git_connection.setStyleSheet("QPushButton { background-color : red }")
+            view_change_button.setStyleSheet(
+                "QPushButton { background-color : light gray }")
+            view_change_button.setEnabled(False)
 
     def refresh(self):
         """Updates git file and refreshes "Diffs" window"""
@@ -148,6 +150,10 @@ class Git(QObject):
     def git_routine(self):
         """Sets up the git subprocess"""
         self.init_git()
+        for window in self.app.topLevelWidgets():
+            if window.windowTitle() == "Repator":
+                git_text = window.layout().itemAt(5).widget()
+        git_text.clicked.connect(self.refresh)
         self.background_thread.start()
 
     def git_upload(self):
@@ -155,6 +161,21 @@ class Git(QObject):
         Uploads to the repo the updated file (vulns)
         """
         self.repo.index.add(DB_VULNS_GIT_FILE)
-        self.repo.index.commit('Commit auto')
+        self.repo.index.commit(COMMIT_MESSAGE)
         self.repo.remote().pull('master')
-        self.repo.remote().push('master')
+        try:
+            self.repo.remote().push('master')
+        except GitCommandError as err:
+            if "Authentication failed" in err.stderr:
+                self.undo_last_commit()
+                print("logon failed")
+                return False
+            else:
+                raise err
+        return True
+
+    def undo_last_commit(self):
+        """
+        Undo the last commit (I wish)
+        """
+        self.repo.head.reset(commit="HEAD~1", working_tree=True)
