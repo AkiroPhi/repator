@@ -51,8 +51,8 @@ class Window(QWidget):
         view_changes_btn.clicked.connect(self.view_changes)
         generate_btn = QPushButton("Generate", self)
         generate_btn.clicked.connect(self.generate)
-        git_text = QLabel("Git connection", self)
-        git_text.setAlignment(Qt.AlignCenter)
+        git_text = QPushButton("Git connection", self)
+        # git_text is connected when git process is running
 
         self.grid = QGridLayout()
         self.grid.setSpacing(5)
