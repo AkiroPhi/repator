@@ -12,7 +12,7 @@
       "category": "",
       "labelNeg": "",
       "labelPos": "",
-      "name": "",
+      "name": "Dummy name",
       "observNeg": "",
       "observNegHistory": [
         "New Observation"
@@ -42,18 +42,16 @@
       "I": "High",
       "PR": "High",
       "S": "Changed",
+      "Script": "",
       "UI": "None",
       "category": "Web Application",
       "labelNeg": "Some user supplied inputs are vulnerable to SQL injection",
       "labelPos": "No user supplied inputs are vulnerable to SQL injection",
       "name": "SQL Injection",
-      "observNeg": "Some user supplied inputs are inefficiently filtered and can be used to execute some SQL code.",
+      "observNeg": "Some user supplied inputs are inefficiently filtered and can be used to execute some SQL code.e",
       "observNegHistory": [
         "New Observation",
-        "Some user supplied inputs are inefficiently filtered and can be used to execute some SQL code.",
-        "Some user supplied inputs are inefficiently filtered and can be used to execute some SQL code. ",
-        "Some user supplied inputs are inefficiently filtered and can be used to execute some SQL code.e",
-        "Some user supplied inputs are inefficiently filtered and can be used to execute some SQL code.\n[[U]]salut[[/U]]"
+        "Some user supplied inputs are inefficiently filtered and can be used to execute some SQL code.e"
       ],
       "observPos": "User inputs are well filtered before being included into SQL requests.",
       "observPosHistory": [
@@ -61,6 +59,7 @@
         "User inputs are well filtered before being included into SQL requests."
       ],
       "reco": "Never trust user supplied inputs, apply some filtering before using them into SQL queries.\nUse SQL prepared statements instead of regular queries.",
+      "recoFR": "Never trust user supplied inputs, apply some filtering before using them into SQL queries.\nUse SQL prepared statements instead of regular queries.",
       "recoHistory": [
         "New Recommandation",
         "Never trust user supplied inputs, apply some filtering before using them into SQL queries.\nUse SQL prepared statements instead of regular queries."
@@ -74,7 +73,8 @@
         "SQL injection may be used by malicious peoples to read all the content of your database.\nDepending on the database configuration and on the injected SQL query, SQL injections are often allowing database writing.\nIn some case SQL injection may also lead to server side code execution."
       ],
       "script": "ls -l",
-      "sub_category": "User input validation"
+      "status": "Vulnerable",
+      "sub_category": "User input validatio"
     },
     "3": {
       "A": "High",
@@ -84,6 +84,7 @@
       "I": "High",
       "PR": "None",
       "S": "Changed",
+      "Script": "",
       "UI": "Required",
       "category": "Web Application",
       "labelNeg": "Some user supplied inputs are vulnerable to Cross-Site-Scripting (XSS)",
@@ -113,45 +114,46 @@
         "XSS may be used by malicious peoples to have some client-side code execution.\\nThis code execution can be used for example to steal user's session, to steal user's sensitives data or to perform some actions using his authorizations."
       ],
       "script": "ls -l",
+      "status": "Not Vulnerable",
       "sub_category": "User input validation"
     },
     "4": {
-      "A": "High",
-      "AC": "High",
-      "AV": "Adjacent",
-      "C": "Low",
+      "A": "None",
+      "AC": "Low",
+      "AV": "Network",
+      "C": "None",
       "I": "None",
-      "PR": "Low",
-      "S": "Changed",
-      "UI": "None",
-      "category": "Cat\u00e9gorie test",
-      "labelNeg": "negative label",
-      "labelPos": "positive label",
-      "name": "vuln\u00e9rabilit\u00e9 test",
-      "observNeg": "negative observation",
+      "PR": "None",
+      "S": "Unchanged",
+      "UI": "Required",
+      "category": "Application",
+      "labelNeg": "This is bad",
+      "labelPos": "",
+      "name": "Buffer Overflow",
+      "observNeg": "",
       "observNegHistory": [
-        "",
-        "negative observation"
+        "New Observation",
+        "\n"
       ],
-      "observPos": "positive observation",
+      "observPos": "",
       "observPosHistory": [
-        "",
-        "positive observation"
+        "New Observation",
+        "\n"
       ],
-      "reco": "recommandation",
+      "reco": "",
       "recoHistory": [
-        "",
-        "recommandation"
+        "New Recommandation",
+        "\n"
       ],
-      "regexNotVuln": ".*(salut.).*",
-      "regexVuln": ".*(README.md).*",
-      "risk": "risk",
+      "regexNotVuln": "",
+      "regexVuln": "",
+      "risk": "",
       "riskHistory": [
-        "",
-        "risk"
+        "New Risk",
+        "\n"
       ],
-      "script": "ls -l",
-      "sub_category": "Sous-Cat\u00e9gorie test"
+      "script": "",
+      "sub_category": "User input validation"
     }
   }
 }
