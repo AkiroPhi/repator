@@ -187,7 +187,7 @@ class SortButton(QPushButton):
         if self.is_repator_button:
             current_status = self.parent.fields["statusSort"].get_checked()
         prefixes = {"id-", "diff-", "category-", "sub_category-", "name-"}
-        prefixes |= {"isVuln-", "edit-",
+        prefixes |= {"isVuln-", "buttonScript-", "edit-",
                      "delete-"} if self.is_repator_button else {"changes-"}
         rows = set()
         for widget in self.parent.fields:

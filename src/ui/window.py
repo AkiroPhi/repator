@@ -1,10 +1,11 @@
 """Main repator window creator."""
 
 # coding=utf-8
-
+from collections import OrderedDict
 from copy import copy
 
-from PyQt5.QtWidgets import QWidget, QTabWidget, QPushButton, QGridLayout, QFileDialog, QLabel
+from PyQt5.QtWidgets import QWidget, QTabWidget, QPushButton, QGridLayout, QFileDialog, QLabel, QMessageBox, \
+    QApplication
 from PyQt5.QtCore import QCoreApplication, Qt
 
 from conf.ui_vulns_initial import VULNS_INITIAL, add_vuln_initial
@@ -29,6 +30,7 @@ class Window(QWidget):
 
         tabw = QTabWidget()
         self.tabs = {}
+        self.tab_is_modified = {}
 
         for label, tab in tab_lst.items():
             if "add_fct" in tab:
@@ -38,6 +40,7 @@ class Window(QWidget):
                 self.tabs[label] = Tab(tabw, tab["lst"], tab["db"])
             else:
                 self.tabs[label] = Tab(tabw, tab)
+            self.tabs[label].updateField.connect(self.set_modified)
             tabw.addTab(self.tabs[label], label)
 
         save_btn = QPushButton("Save", self)
@@ -61,7 +64,6 @@ class Window(QWidget):
         self.grid.addWidget(view_changes_btn, 1, 2)
         self.grid.addWidget(generate_btn, 1, 3)
         self.grid.addWidget(git_text, 1, 4)
-
 
         self.setLayout(self.grid)
 
@@ -98,12 +100,34 @@ class Window(QWidget):
         if project_filename:
             with open(project_filename, 'w') as project_file:
                 project_file.write(json.dumps(values))
+                return True
+        return False
 
     def generate(self):
         """Launches the docx report generation."""
         values = {}
         for tabname, tab in self.tabs.items():
             values[tabname] = tab.save(database=False)
+
+        # Adding images in values to generation
+        lst = self.tabs["Vulns"].lst["vulns"]["arg"][0]
+        for idents, elem in lst.items():
+            field = idents.split("-")
+            if len(field) > 1 and field[1] in values["Vulns"]:
+                if "imagesPath" in field[0]:
+                    values["Vulns"][field[1]]["imagesPath"] = elem
+
+                if "imagesText" in field[0]:
+                    values["Vulns"][field[1]]["imagesText"] = elem
+
+                if "imagesHistory" in field[0]:
+                    values["Vulns"][field[1]]["imagesHistory"] = elem
+
+        # Removing db from values
+        for name, value in values.items():
+            if "db" in value:
+                del values[name]["db"]
+
         output_filename = QFileDialog.getSaveFileName(
             self, "Generate Report", "output.docx",
             "Microsoft Document [*.docx] (*.docx);;All files [*] (*)")[0]
@@ -123,3 +147,34 @@ class Window(QWidget):
                 return
         window = VulnsGit("Diffs", tab_lst)
         window.showMaximized()
+
+    def set_modified(self, tab, value):
+        if tab is None:
+            self.tab_is_modified.clear()
+        else:
+            self.tab_is_modified[tab] = value
+
+    def closeEvent(self, event):
+        have_been_modified = False
+        for value in self.tab_is_modified.values():
+            if value:
+                have_been_modified = True
+
+        if have_been_modified:
+            close = QMessageBox.question(self,
+                                         "QUIT",
+                                         "Changes have been occurred.\nDo you want to quit without saving?",
+                                         QMessageBox.Yes | QMessageBox.Save | QMessageBox.No)
+        try:
+            if not have_been_modified or close == QMessageBox.Yes:
+                QApplication.instance().closeAllWindows()
+            elif close == QMessageBox.Save:
+                if not self.save():
+                    self.tab_is_modified["dataNotSaved"] = True
+                    event.ignore()
+                else:
+                    QApplication.instance().closeAllWindows()
+            else:
+                event.ignore()
+        except:
+            pass

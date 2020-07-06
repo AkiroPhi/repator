@@ -10,10 +10,11 @@ class History(QComboBox):
     Class that represent the history of some fields and allow to delete some entries.
     """
 
-    def __init__(self, parent):
+    def __init__(self, parent, local=False):
         super().__init__(parent)
         self._parent = parent
         self.init_view()
+        self.local = local
 
     def init_model(self):
         """
@@ -49,13 +50,15 @@ class History(QComboBox):
         """
         Remove item at row in the model and the database.
         """
-        database = self._parent.database
-        history_field_name = self.accessibleName()
-        field_tab = history_field_name.split('-')
-        field_name = history_field_name.replace("History", "")
-        history = database.search_by_id(int(field_tab[1]))[field_tab[0]]
-        history.pop(row)
-        database.update(int(field_tab[1]), field_tab[0], history)
+        self.model().removeRow(row)
+        if not self.local :
+            database = self._parent.database
+            history_field_name = self.accessibleName()
+            field_tab = history_field_name.split('-')
+            field_name = history_field_name.replace("History", "")
+            history = database.search_by_id(int(field_tab[1]))[field_tab[0]]
+            history.pop(row)
+            database.update(int(field_tab[1]), field_tab[0], history)
 
     def dealWithPressEvent(self, index):
         """
@@ -66,3 +69,7 @@ class History(QComboBox):
         if col == 1 and row > 0: # don't delete the first row
             self.removeItem(row)
         # else nothing to do
+
+    def addItems(self, lst):
+        for elem in lst:
+            self.addItem(elem)

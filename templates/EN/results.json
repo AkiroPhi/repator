@@ -60,6 +60,18 @@
                     "content": "##observNeg##"
                 },
                 {
+                    "type": "Images",
+                    "content": [
+                        {
+                            "type": "image"
+                        },
+                        {
+                            "type": "Normal",
+                            "content": "##legend##"
+                        }
+                    ]
+                },
+                {
                     "type": "Heading 5",
                     "content": "Risk"
                 },
@@ -93,6 +105,18 @@
                 {
                     "type": "Normal",
                     "content": "##observPos##"
+                },
+                {
+                    "type": "Images",
+                    "content": [
+                        {
+                            "type": "image"
+                        },
+                        {
+                            "type": "Normal",
+                            "content": "##legend##"
+                        }
+                    ]
                 },
                 {
                     "type": "Heading 5",

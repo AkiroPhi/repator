@@ -67,8 +67,6 @@ class DBHandler:
         """Adds a new record to the database."""
         if dictionary is None:
             dictionary = collections.OrderedDict(self.search_by_id(1))
-            # for k in dictionary:
-            #     dictionary[k] = type(dictionary[k])()
         return self.database.insert(dictionary)
 
     def insert_multiple(self, dictionary):
