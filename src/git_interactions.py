@@ -91,7 +91,6 @@ class Git(QObject):
                     diffs.refresh_tab_widget()
                     # TODO: add an automatic refresh of the diff window if changed
         except GitCommandError as err:
-            print(err)
             self.git_reachable = False
 
         self.update_changes_buttons(repator, diffs)
@@ -167,7 +166,6 @@ class Git(QObject):
         except GitCommandError as err:
             if "Authentication failed" in err.stderr:
                 self.undo_last_commit()
-                print("logon failed")
                 return False
             else:
                 raise err
