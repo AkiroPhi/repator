@@ -297,6 +297,51 @@ def vuln_changes(doc_id: int, vuln1: dict, vuln2: dict, style: COLORS, lang: str
         "col": 5,
         "colspan": 4}
 
+    lst["script" + lang + "-" + str(doc_id)] = {
+        "class": QLabel,
+        "arg": "Status Script",
+        "col": 0}
+    lst["script" + lang + "-" + str(doc_id) + "-1"] = {
+        "class": QLabel,
+        "arg": vuln1["script"+lang] if "script"+lang in vuln1 else vuln1["script"],
+        "col": 1,
+        "colspan": 4}
+    lst["script" + lang + "-" + str(doc_id) + "-2"] = {
+        "class": QLabel,
+        "arg": vuln2["script"+lang] if "script"+lang in vuln2 else vuln2["script"],
+        "col": 5,
+        "colspan": 4}
+
+    lst["regexVuln" + lang + "-" + str(doc_id)] = {
+        "class": QLabel,
+        "arg": "Regex Vulnerable",
+        "col": 0}
+    lst["regexVuln" + lang + "-" + str(doc_id) + "-1"] = {
+        "class": QLabel,
+        "arg": vuln1["regexVuln"+lang] if "regexVuln"+lang in vuln1 else vuln1["regexVuln"],
+        "col": 1,
+        "colspan": 4}
+    lst["regexVuln" + lang + "-" + str(doc_id) + "-2"] = {
+        "class": QLabel,
+        "arg": vuln2["regexVuln"+lang] if "regexVuln"+lang in vuln2 else vuln2["regexVuln"],
+        "col": 5,
+        "colspan": 4}
+
+    lst["regexNotVuln" + lang + "-" + str(doc_id)] = {
+        "class": QLabel,
+        "arg": "Regex Not Vulnerable",
+        "col": 0}
+    lst["regexNotVuln" + lang + "-" + str(doc_id) + "-1"] = {
+        "class": QLabel,
+        "arg": vuln1["regexNotVuln"+lang] if "regexNotVuln"+lang in vuln1 else vuln1["regexNotVuln"],
+        "col": 1,
+        "colspan": 4}
+    lst["regexNotVuln" + lang + "-" + str(doc_id) + "-2"] = {
+        "class": QLabel,
+        "arg": vuln2["regexNotVuln"+lang] if "regexNotVuln"+lang in vuln2 else vuln2["regexNotVuln"],
+        "col": 5,
+        "colspan": 4}
+
     lst["CVSSLabel"] = {"class": QLabel,
                         "arg": "CVSSv3 metrics",
                         "col": 0}
