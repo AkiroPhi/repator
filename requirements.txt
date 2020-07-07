@@ -3,4 +3,4 @@ pyqt5>=5.7
 -e git+https://github.com/lnv42/python-docx@master#egg=python-docx
 fire
 gitpython
-PIL
+Pillow
