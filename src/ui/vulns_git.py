@@ -110,10 +110,10 @@ class VulnsGit(QWidget):
                     VulnsGit.init_history_color(self.tabs[label], label)
                     self.update_cvss_metrics(label, self.tabs[label])
                 else:
-                    for tab in self.tabs[label]:
-                        VulnsGit.init_history_color(
-                            self.tabs[label][tab], label)
-                        self.update_cvss_metrics(label, self.tabs[label][tab])
+                    for lang in self.tabs[label]:
+                        VulnsGit.init_history_color(lang,
+                            self.tabs[label][lang], label)
+                        self.update_cvss_metrics(label, self.tabs[label][lang])
 
     def init_bottom_buttons(self):
         """Creates the buttons at the bottom of the window "Diffs"."""
@@ -473,40 +473,17 @@ class VulnsGit(QWidget):
         tab.fields[label].setStyleSheet("QLabel { color : " + color + " }")
 
     @staticmethod
-    def init_history_color(tab, doc_id):
+    def init_history_color(lang, tab, doc_id):
         """Initializes the colors inside the comboboxes and labels for HISTORY fields."""
+        # (first test if lang is the first)
+        if "name" + lang + "-" + doc_id not in tab.fields:
+            lang = ""
         for history in HISTORIES:
-            fields = [None for i in range(6)]
-            field_names = [None for i in range(6)]
-            for lang in [""] + LANGUAGES:
-                if not fields[0] and history + "History" + lang + "-" + doc_id in tab.fields:
-                    fields[0] = tab.fields[history +
-                                           "History" + lang + "-" + doc_id]
-                    field_names[0] = history + "History" + lang + "-" + doc_id
-                if (not fields[1] and history + "History" + lang + "-" +
-                        doc_id + "-" + "2" in tab.fields):
-                    fields[1] = tab.fields[history + "History" +
-                                           lang + "-" + doc_id + "-" + "1"]
-                    field_names[1] = history + "History" + \
-                        lang + "-" + doc_id + "-" + "1"
-                if (not fields[2] and history + "History" + lang + "-" +
-                        doc_id + "-" + "2" in tab.fields):
-                    fields[2] = tab.fields[history + "History" +
-                                           lang + "-" + doc_id + "-" + "2"]
-                    field_names[2] = history + "History" + \
-                        lang + "-" + doc_id + "-" + "2"
-                if not fields[3] and history + lang + "-" + doc_id in tab.fields:
-                    fields[3] = tab.fields[history + lang + "-" + doc_id]
-                    field_names[3] = history + lang + "-" + doc_id
-                if not fields[4] and history + lang + "-" + doc_id + "-" + "1" in tab.fields:
-                    fields[4] = tab.fields[history +
-                                           lang + "-" + doc_id + "-" + "1"]
-                    field_names[4] = history + lang + "-" + doc_id + "-" + "1"
-                if not fields[5] and history + lang + "-" + doc_id + "-" + "2" in tab.fields:
-                    fields[5] = tab.fields[history +
-                                           lang + "-" + doc_id + "-" + "2"]
-                    field_names[5] = history + lang + "-" + doc_id + "-" + "1"
-
+            field_names = [ history + "History" + lang + "-" + doc_id + suffix
+                            for suffix in ["", "-1", "-2" ]] +\
+                                [ history + lang + "-" +doc_id + suffix
+                                  for suffix in ["", "-1", "-2" ]]
+            fields = [tab.fields[name] for name in field_names]
             diff = fields[1].count() - fields[2].count()
             max_count = fields[1].count() if diff > 0 else fields[2].count()
             if diff >= 0:
