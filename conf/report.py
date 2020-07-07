@@ -23,3 +23,4 @@ HISTORIES = {"reco", "observPos", "observNeg", "risk"}
 GIT = "git@127.0.0.1:~/vulnerabilities.git"
 SSH_KEY = "~/.ssh/id_rsa"
 REFRESH_RATE = 10
+COMMIT_MESSAGE = "Commit auto"
