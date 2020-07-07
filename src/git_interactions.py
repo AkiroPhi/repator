@@ -95,7 +95,7 @@ class Git(QObject):
             print(err)
             self.git_reachable = False
 
-        self.update_changes_buttons(repator, diffs)
+        self.update_changes_buttons(repator)
         return ret_value
 
 
@@ -121,9 +121,8 @@ class Git(QObject):
             self.git_update()
             time.sleep(REFRESH_RATE)
 
-    def update_changes_buttons(self, repator, diffs):
+    def update_changes_buttons(self, repator):
         """Updates View changes and refresh colors"""
-        #TODO remove diffs parameter
         view_change_button = repator.layout().itemAt(3).widget()
         git_connection = repator.layout().itemAt(5).widget()
         if self.git_reachable:
@@ -170,6 +169,8 @@ class Git(QObject):
         try:
             self.repo.remote().push('master')
         except GitCommandError as err:
+            #TODO deal with other error ---> no right to push
+            #                           \-->
             if "Authentication failed" in err.stderr:
                 self.undo_last_commit()
                 print("logon failed")
