@@ -153,7 +153,7 @@ class Tab(QScrollArea):
                 int(field_tab[1]))[field_tab[0]]
 
             if value not in history:
-                history.append(value)
+                history.insert(1, value)
             self.database.update(int(field_tab[1]), field_tab[0], history)
 
     def save_history_image(self, history_field_name):
