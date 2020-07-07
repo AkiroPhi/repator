@@ -37,7 +37,7 @@ class Git(QObject):
         self.clean_git()
         print("Init Git in " + DB_VULNS_GIT_DIR + "\nurl : " + GIT)
         self.repo = Repo.init(DB_VULNS_GIT_DIR)
-        ssh_cmd = "ssh -i " + SSH_KEY + " -F /dev/null -o NumberOfPasswordPrompts=0"
+        ssh_cmd = "ssh -i " + SSH_KEY + " -F /dev/null -o NumberOfPasswordPrompts=0 -o StrictHostKeyChecking=no"
         self.repo.git.update_environment(GIT_SSH_COMMAND=ssh_cmd) # set the config ?
         self.repo.create_remote('origin', url=GIT)
 
@@ -123,6 +123,7 @@ class Git(QObject):
 
     def update_changes_buttons(self, repator, diffs):
         """Updates View changes and refresh colors"""
+        #TODO remove diffs parameter
         view_change_button = repator.layout().itemAt(3).widget()
         git_connection = repator.layout().itemAt(5).widget()
         if self.git_reachable:
@@ -131,6 +132,9 @@ class Git(QObject):
             if self.vulnerabilities_changed(): # if the vulnerabilities  aren't hidden
                 view_change_button.setStyleSheet(
                     "QPushButton { background-color : orange }")
+            else:
+                view_change_button.setStyleSheet(
+                    "QPushButton { background-color : light gray }")
         else:
             git_connection.setStyleSheet("QPushButton { background-color : red }")
             view_change_button.setStyleSheet(
