@@ -479,7 +479,7 @@ class VulnsGit(QWidget):
             lang = "" # if the lang is not here it's because it is the first lang
         for history in HISTORIES:
             field_names = [ history + "History" + lang + "-" + doc_id + suffix
-                            for suffix in ["", "-1", "-2" ]] 
+                            for suffix in ["", "-1", "-2" ]]
             fields = [tab.fields[name] for name in field_names]
 
             # comparaison du bas vers le haut

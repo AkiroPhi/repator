@@ -269,11 +269,7 @@ class Tab(QScrollArea):
         # Creates a .json containing auditors and clients
         # Updates currents auditors and clients
         if self.database is not None and "db" in values:
-            db_path = self.database.path
-            default_values = self.database.default_values
-            os.remove(db_path)
-            self.database.close()
-            self.database = DBHandler(db_path, default_values)
+            self.database.purge()
             self.database.insert_multiple(values["db"])
 
             if self.add_fct is not None:
