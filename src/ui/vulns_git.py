@@ -443,7 +443,7 @@ class VulnsGit(QWidget):
         style = self.style[doc_id]
         VulnsGit.set_style(tab, style, "id-" + doc_id)
         VulnsGit.set_style(tab, style, "status")
-        for header in [h + lang + "-" + doc_id for h in HEADERS]:
+        for header in [h + lang + "-" + doc_id for h in HEADERS.union(HISTORIES)]:
             if style == GREEN or (not tab.fields[header + "-1"].text() and
                                   tab.fields[header + "-2"].text()):
                 VulnsGit.set_style(tab, GREEN, header + "-2")
@@ -475,45 +475,39 @@ class VulnsGit(QWidget):
     @staticmethod
     def init_history_color(lang, tab, doc_id):
         """Initializes the colors inside the comboboxes and labels for HISTORY fields."""
-        # (first test if lang is the first)
         if "name" + lang + "-" + doc_id not in tab.fields:
-            lang = ""
+            lang = "" # if the lang is not here it's because it is the first lang
         for history in HISTORIES:
             field_names = [ history + "History" + lang + "-" + doc_id + suffix
-                            for suffix in ["", "-1", "-2" ]] +\
-                                [ history + lang + "-" +doc_id + suffix
-                                  for suffix in ["", "-1", "-2" ]]
+                            for suffix in ["", "-1", "-2" ]] 
             fields = [tab.fields[name] for name in field_names]
-            diff = fields[1].count() - fields[2].count()
-            max_count = fields[1].count() if diff > 0 else fields[2].count()
-            if diff >= 0:
-                for i in range(max_count - diff):
-                    if fields[1].itemText(i + diff) != fields[2].itemText(i):
-                        fields[1].setItemData(
-                            i + diff, QColor(BLUE), Qt.ForegroundRole)
-                        fields[2].setItemData(
-                            i, QColor(BLUE), Qt.ForegroundRole)
-                        VulnsGit.set_style(tab, BLUE, field_names[0])
-                        VulnsGit.set_style(tab, BLUE, field_names[3])
-                for i in range(diff):
+
+            # comparaison du bas vers le haut
+            n1 = fields[1].count()
+            n2 = fields[2].count()
+            diff = n1 - n2
+            min_count = n1 if diff < 0 else n2
+            for i in range(min_count):
+                if fields[1].itemText(n1 - i) != fields[2].itemText(n2 - i):
+                    fields[1].setItemData(
+                        n1 - i, QColor(BLUE), Qt.ForegroundRole)
+                    fields[2].setItemData(
+                        n2 - i, QColor(BLUE), Qt.ForegroundRole)
+                    VulnsGit.set_style(tab, BLUE, field_names[0])
+            if diff > 0:
+                for i in range(1, diff+1): # the first text is always the same (New /sommething/)
                     fields[1].setItemData(i, QColor(RED), Qt.ForegroundRole)
-            else:
-                for i in range(max_count + diff):
-                    if fields[1].itemText(i) != fields[2].itemText(i - diff):
-                        fields[1].setItemData(
-                            i, QColor(BLUE), Qt.ForegroundRole)
-                        fields[2].setItemData(
-                            i - diff, QColor(BLUE), Qt.ForegroundRole)
-                        VulnsGit.set_style(tab, BLUE, field_names[0])
-                        VulnsGit.set_style(tab, BLUE, field_names[3])
-                for i in range(-diff):
+                    VulnsGit.set_style(tab, BLUE, field_names[0])
+            elif diff < 0:
+                for i in range(1, 1-diff): # the first text is always the same (New /sommething/)
                     fields[2].setItemData(i, QColor(GREEN), Qt.ForegroundRole)
-            if not max_count - diff:
+                    VulnsGit.set_style(tab, BLUE, field_names[0])
+            if not min_count and diff > 0:
                 VulnsGit.set_style(tab, RED, field_names[0])
-                VulnsGit.set_style(tab, RED, field_names[3])
-            if not max_count + diff:
+                fields[1].setItemData(0, QColor(RED), Qt.ForegroundRole)
+            if not min_count and diff < 0:
                 VulnsGit.set_style(tab, GREEN, field_names[0])
-                VulnsGit.set_style(tab, GREEN, field_names[3])
+                fields[2].setItemData(0, QColor(GREEN), Qt.ForegroundRole)
 
     def update_history(self, field_name, tab, index):
         """Changes the text and colors in the QLabels below history comboboxes."""
