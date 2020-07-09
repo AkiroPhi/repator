@@ -14,7 +14,7 @@ from docx.enum.table import WD_CELL_VERTICAL_ALIGNMENT
 from conf.report import REPORT_TEMPLATE_DIR, REPORT_TEMPLATE_MAIN, REPORT_TEMPLATE_BASE, LANGUAGES
 from src.cvss import vuln_risk_level, vuln_cvssv3
 
-IMG_NOT_FOUND_DIR = REPORT_TEMPLATE_DIR + "image-not-found.png"
+IMG_NOT_FOUND_DIR = "img/image-not-found.png"
 
 
 class Generator:
