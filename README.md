@@ -60,7 +60,7 @@ Install Python3 https://www.python.org/downloads
 Install Git https://git-scm.com/downloads
 
 When you install Python3, you need to check the add Python to PATH box
-![image in coming](img/help.png)
+![image in coming](img/Python_Path.png)
 
 #### Repator
 Open the git bash (right click in the directory you want the repator --> Git Bash)
