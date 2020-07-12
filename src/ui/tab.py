@@ -4,10 +4,11 @@
 import os
 from collections import OrderedDict, defaultdict
 from re import sub
+from threading import Thread
 
-from PyQt5.QtCore import Qt, QDate, pyqtSignal
+from PyQt5.QtCore import Qt, QDate, pyqtSignal, QObject
 from PyQt5.QtGui import QPixmap
-from PyQt5.QtWidgets import QScrollArea, QGridLayout, QWidget, QLabel, QLineEdit, QDateEdit, QDialog
+from PyQt5.QtWidgets import QScrollArea, QGridLayout, QWidget, QLabel, QLineEdit, QDateEdit, QDialog, QProgressBar
 
 from conf.report import LANGUAGES
 from conf.ui_auditors import add_people
@@ -15,7 +16,6 @@ from conf.ui_vuln_edit import vuln_editing
 from conf.ui_vulns import add_vuln
 from src.status_vuln import status_vuln
 from src.cvss import cvssv3, risk_level
-from src.dbhandler import DBHandler
 from src.ui.diff_status import DiffStatus
 from src.ui.sort_button import SortButton
 
@@ -456,7 +456,6 @@ class Tab(QScrollArea):
             del self.values[doc_id]
         self.database.delete(int(doc_id))
         self.fields["categorySort"].update_values()
-        tab_Vulns = self.get_parent(self).tabs["Vulns"]
 
     def add_vuln(self):
         """Adds a vuln to the database and displays it as a newly added vuln."""
@@ -469,7 +468,6 @@ class Tab(QScrollArea):
         self.fields["buttonScript-" + str(doc_id)].setEnabled(False)
         self.fields["categorySort"].connect_buttons(doc_id)
         self.fields["diff-" + str(doc_id)].added()
-        tab_Vulns = self.get_parent(self).tabs["Vulns"]
 
     def status_vuln(self):
         """Calculates the status of the selected vulnerability.
@@ -485,10 +483,37 @@ class Tab(QScrollArea):
     def status_vulns(self):
         """Calculates the status of all vulnerabilities.
         This method is called by a signal"""
+
+        lstVulns = []
         for name in self.fields:
             split = name.split("-")
-            if len(split) == 2 and split[0] == "id" and len(split[1]) > 0:
-                self.set_status_vuln(split[1])
+            if len(split) == 2 and split[0] == "id" and len(split[1]) > 0 and\
+                    ("buttonScript-" + split[1]) in self.fields and self.fields["buttonScript-" + split[1]].isEnabled():
+                lstVulns.append(split[1])
+
+        # Creates a thread allowing to calculate the vulns status without blocking the GUI
+        # Adds a progress bar in place of the button displaying the progress of the calculation
+        thread = ThreadSetStatus(self, lstVulns)
+        thread.signalsThread.set.connect(self.add_progress)
+        thread.signalsThread.remove.connect(self.remove_progress)
+        thread.signalsThread.update.connect(self.update_progress)
+        thread.start()
+
+    def add_progress(self, parent, row, column, rowspan, colspan):
+        self.progress = QProgressBar(self)
+        tab_all = self.get_parent(parent, "vulns").tabs["All"]
+        tab_all.grid.addWidget(self.progress, row, column, rowspan, colspan)
+
+    def remove_progress(self, parent):
+        tab_all = self.get_parent(parent, "vulns").tabs["All"]
+        tab_all.grid.removeWidget(self.progress)
+        self.progress.deleteLater()
+        del self.progress
+
+    def update_progress(self, parent, value):
+        self.progress.setValue(value)
+        tab_all = self.get_parent(parent, "vulns").tabs["All"]
+        tab_all.grid.update()
 
     def add_auditor(self):
         """Adds an auditor to the database and displays it."""
@@ -576,13 +601,16 @@ class Tab(QScrollArea):
                 return None if name is not None else sender
             sender = sender.parent()
 
-    def set_status_vuln(self, doc_id, dispay_popup_error=False):
+    def set_status_vuln(self, doc_id, dispay_popup_error=False, parent=None):
         """Internal method replacing the variables from the script corresponding with the ID"""
 
         vuln = self.database.search_by_id(int(doc_id))
         if "script" in vuln and len(vuln["script"]) > 0:
             # Gets the Window tab
-            tab_window = self.get_parent(self.sender())
+            if parent is None:
+                tab_window = self.get_parent(self.sender())
+            else:
+                tab_window = self.get_parent(parent)
             if tab_window is None:
                 return
 
@@ -603,7 +631,10 @@ class Tab(QScrollArea):
                             doc_id].setCurrentText(result[0])
             elif dispay_popup_error and (result is None or not result[0] in self.valid_status_vuln):
                 self.display_error_test(result)
-        tab_Vulns = self.get_parent(self.sender()).tabs["Vulns"]
+        if parent is None:
+            tab_Vulns = self.get_parent(self.sender()).tabs["Vulns"]
+        else:
+            tab_Vulns = self.get_parent(parent).tabs["Vulns"]
         tab_Vulns.updateField.emit(tab_Vulns, True)
 
     def display_help_var(self):
@@ -881,9 +912,10 @@ class ClickableQWidget(QWidget):
 
 
 class Popup(QDialog):
-    def __init__(self, name, parent=None):
+    def __init__(self, name=None, parent=None):
         super().__init__(parent)
-        self.name = name
+        if name is not None:
+            self.name = name
 
         self.grid = QGridLayout()
         self.grid.setSpacing(5)
@@ -891,4 +923,34 @@ class Popup(QDialog):
         self.grid.setAlignment(Qt.AlignTop)
         self.setLayout(self.grid)
 
-        self.grid.addWidget(QLabel(self.name, self))
+        if name is not None:
+            self.grid.addWidget(QLabel(self.name, self))
+
+class ThreadSignal(QObject):
+    update = pyqtSignal(QWidget, int)
+    set = pyqtSignal(QWidget, int, int, int, int)
+    remove = pyqtSignal(QWidget)
+
+class ThreadSetStatus(Thread):
+
+    def __init__(self, tab, lstVuln):
+        super().__init__()
+        self.tab = tab
+        self.signalsThread = ThreadSignal()
+        self.lstVuln = lstVuln
+
+    def run(self) -> None:
+        step = 0
+        self.signalsThread.set.emit(self.tab, 1, 6, 1, 3)
+        self.signalsThread.update.emit(self.tab, 0)
+        for indexVuln in self.lstVuln:
+            self.tab.set_status_vuln(indexVuln, parent=self.tab)
+            step += 1
+
+            pourc = round((step * 100) / len(self.lstVuln))
+            self.signalsThread.update.emit(self.tab, pourc)
+
+        self.signalsThread.remove.emit(self.tab)
+        self.tab.update()
+
+
