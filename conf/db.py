@@ -50,3 +50,6 @@ DB_VULNS_DEFAULT["S"] = "Unchanged"
 DB_VULNS_DEFAULT["C"] = "None"
 DB_VULNS_DEFAULT["I"] = "None"
 DB_VULNS_DEFAULT["A"] = "None"
+
+DB_VULNS_DIFFERENT_LANG = ["category", "sub_category", "name", "labelNeg", "labelPos", "observNeg", "observNegHistory",
+                   "observPos", "observPosHistory", "risk", "riskHistory", "reco", "recoHistory"]

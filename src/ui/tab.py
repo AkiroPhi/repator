@@ -134,7 +134,7 @@ class Tab(QScrollArea):
         history_field_name = sender.accessibleName()
         doc = self.database.search_by_id(
             int(history_field_name.split('-')[-1]))
-        field = sub(r'History.*', 'History', history_field_name)
+        field = sub(r'-.*', '', history_field_name)
         if sender.currentIndex() != 0:
             field_name = history_field_name.replace("History", "")
 
@@ -143,18 +143,55 @@ class Tab(QScrollArea):
 
     def save_history(self, history_field_name):
         """Writes the history into the database."""
-        if self.fields[history_field_name].currentIndex() == 0:
-            field_tab = history_field_name.split('-')
-            field_name = history_field_name.replace("History", "")
+        if len(LANGUAGES) > 1:
+            first_lang = True
+            for lang in LANGUAGES:
+                history_field_lang_name = history_field_name
+                if first_lang:
+                    first_lang = False
+                else:
+                    history_field_lang_name = history_field_lang_name.replace("-", lang + "-")
+                if history_field_lang_name in self.fields:
+                    field_tab = history_field_lang_name.split('-')
+                    field_name = history_field_lang_name.replace("History", "")
 
-            value = self.fields[field_name].to_plain_text()
+                    value = self.fields[field_name].to_plain_text()
 
-            history = self.database.search_by_id(
-                int(field_tab[1]))[field_tab[0]]
+                    history = self.database.search_by_id(
+                        int(field_tab[1]))[field_tab[0]]
 
-            if value not in history:
-                history.append(value)
-            self.database.update(int(field_tab[1]), field_tab[0], history)
+                    if value not in history:
+                        history.append(value)
+                    self.database.update(int(field_tab[1]), field_tab[0], history)
+                else:
+                    field_tab_lang = history_field_lang_name.split('-')
+                    field_name_lang = history_field_lang_name.replace("History", "")
+                    vuln = self.database.search_by_id(
+                        int(field_tab_lang[1]))
+
+                    if field_tab_lang[0] in vuln:
+                        history = vuln[field_tab_lang[0]]
+                        if field_name_lang.split("-")[0] in vuln:
+                            value = vuln[field_name_lang.split("-")[0]]
+                            if value not in history:
+                                history.append(value)
+                            self.database.update(int(field_tab_lang[1]), field_tab_lang[0], history)
+                    else:
+                        self.database.update(int(field_tab_lang[1]), field_tab_lang[0],
+                                             self.database.default_values[history_field_name.split("-")[0]])
+        else:
+            if self.fields[history_field_name].currentIndex() == 0:
+                field_tab = history_field_name.split('-')
+                field_name = history_field_name.replace("History", "")
+
+                value = self.fields[field_name].to_plain_text()
+
+                history = self.database.search_by_id(
+                    int(field_tab[1]))[field_tab[0]]
+
+                if value not in history:
+                    history.append(value)
+                self.database.update(int(field_tab[1]), field_tab[0], history)
 
     def save_history_image(self, history_field_name):
         """Updates the images history."""
