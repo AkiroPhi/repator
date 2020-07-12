@@ -161,6 +161,8 @@ class Tab(QScrollArea):
                         int(field_tab[1]))[field_tab[0]]
 
                     if value not in history:
+                        if not isinstance(history, list):
+                            history = []
                         history.append(value)
                     self.database.update(int(field_tab[1]), field_tab[0], history)
                 else:
