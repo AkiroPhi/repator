@@ -26,17 +26,22 @@ class Tab(QScrollArea):
     # Whenever a tab field is modified, transmits an 'updateField' signal
     updateField = pyqtSignal(QScrollArea, bool, name="updateField")
 
-    def __init__(self, parent, lst, database=None, add_fct=None):
+    def __init__(self, parent, lst, database=None, add_fct=None, accessibleName=None):
         super().__init__(parent)
         self.head_lst = lst
         self.database = database
         self.add_fct = add_fct
         self._parent = parent
+        if accessibleName is not None:
+            self.setAccessibleName(accessibleName)
         self.row = 0
         self.lst = self.head_lst
         self.values = OrderedDict()
         self.valid_status_vuln = ["Vulnerable", "Not Vulnerable"]
         self.lst_images = defaultdict(lambda: list())
+        for lang in LANGUAGES:
+            if lang != LANGUAGES[0]:
+                self.lst_images[lang] = {}
         self.lst_loaded = {}
 
         self.init_tab()
@@ -206,12 +211,19 @@ class Tab(QScrollArea):
         tab_all = tab_vuln.tabs["All"]
         field_tab = history_field_name.split('-')
 
-        # Gets the fields containing the history of images texts and update it if necessary
-        images_text = tab_all.lst[field_tab[0] + "Text-" + field_tab[1]]["value"]
-        images_history = tab_all.lst[field_tab[0] + "History-" + field_tab[1]]["value"]
-        for index in range(len(images_text)):
-            if images_text[index] not in images_history:
-                images_history.append(images_text[index])
+        # Gets the fields containing the history of images texts and update it if necessary for each languages
+        for lang in LANGUAGES:
+            if lang == LANGUAGES[0]:
+                images_text = tab_all.lst[field_tab[0] + "Text-" + field_tab[1]]["value"]
+                images_history = tab_all.lst[field_tab[0] + "History-" + field_tab[1]]["value"]
+            else:
+                images_text = tab_all.lst[field_tab[0] + "Text-" + field_tab[1]]["value" + lang]
+                if "value" + lang not in tab_all.lst[field_tab[0] + "History-" + field_tab[1]]:
+                    tab_all.lst[field_tab[0] + "History-" + field_tab[1]]["value" + lang] = ["New observation"]
+                images_history = tab_all.lst[field_tab[0] + "History-" + field_tab[1]]["value" + lang]
+            for index in range(len(images_text)):
+                if images_text[index] not in images_history:
+                    images_history.append(images_text[index])
 
     def save_histories(self):
         """Writes all histories into the database."""
@@ -572,16 +584,31 @@ class Tab(QScrollArea):
             return
 
         field_tab = self.sender().accessibleName().split('-')
-        self.lst_images[field_tab[1]] += [index]
 
-        path_name_lst = field_tab[0] + "Path-" + field_tab[1]
-        text_name_lst = field_tab[0] + "Text-" + field_tab[1]
+        # Each language has the same path for the same image but different text
         for lang in LANGUAGES:
-            if lang in field_tab[0]:
-                path_name_lst = path_name_lst.replace(lang, "")
-                text_name_lst = text_name_lst.replace(lang, "")
-        tab_all.lst[path_name_lst]["value"] += [name]
-        tab_all.lst[text_name_lst]["value"] += [""]
+            lang_tab = ""
+            path_name_lst = field_tab[0] + "Path-" + field_tab[1]
+            text_name_lst = field_tab[0] + "Text-" + field_tab[1]
+            for language in LANGUAGES:
+                if language in field_tab[0]:
+                    path_name_lst = path_name_lst.replace(language, "")
+                    text_name_lst = text_name_lst.replace(language, "")
+
+            if lang == LANGUAGES[0]:
+                self.lst_images[field_tab[1]] += [index]
+                tab_all.lst[path_name_lst]["value"] += [name]
+                tab_all.lst[text_name_lst]["value"] += [""]
+            else:
+                lang_tab = lang
+                if field_tab[1] not in self.lst_images[lang]:
+                    self.lst_images[lang][field_tab[1]] = []
+                self.lst_images[lang][field_tab[1]] += [index]
+
+                if "value" + lang_tab not in tab_all.lst[text_name_lst]:
+                    tab_all.lst[text_name_lst]["value" + lang_tab] = []
+                tab_all.lst[text_name_lst]["value" + lang_tab] += [""]
+
         self.updateField.emit(self, True)
 
     def remove_image(self, index):
@@ -592,18 +619,27 @@ class Tab(QScrollArea):
         if tab_all is None:
             return
 
+        # We removes the same path and all the texts corresponding to the image
         field_tab = self.sender().accessibleName().split('-')
-        index_images = list(self.lst_images[field_tab[1]]).index(index)
-        del self.lst_images[field_tab[1]][index_images]
-
-        path_name_lst = field_tab[0] + "Path-" + field_tab[1]
-        text_name_lst = field_tab[0] + "Text-" + field_tab[1]
         for lang in LANGUAGES:
-            if lang in field_tab[0]:
-                path_name_lst = path_name_lst.replace(lang, "")
-                text_name_lst = text_name_lst.replace(lang, "")
-        del tab_all.lst[path_name_lst]["value"][index_images]
-        del tab_all.lst[text_name_lst]["value"][index_images]
+            lang_tab = ""
+            path_name_lst = field_tab[0] + "Path-" + field_tab[1]
+            text_name_lst = field_tab[0] + "Text-" + field_tab[1]
+            for language in LANGUAGES:
+                if language in field_tab[0]:
+                    path_name_lst = path_name_lst.replace(language, "")
+                    text_name_lst = text_name_lst.replace(language, "")
+            if lang == LANGUAGES[0]:
+                index_images = list(self.lst_images[field_tab[1]]).index(index)
+                del self.lst_images[field_tab[1]][index_images]
+                del tab_all.lst[path_name_lst]["value"][index_images]
+                del tab_all.lst[text_name_lst]["value"][index_images]
+            else:
+                lang_tab = lang
+                index_images_lang = list(self.lst_images[lang_tab][field_tab[1]]).index(index)
+                del self.lst_images[lang_tab][field_tab[1]][index_images_lang]
+                del tab_all.lst[text_name_lst]["value" + lang_tab][index_images]
+
         self.updateField.emit(self, True)
 
     def modify_image(self, index, name, string):
@@ -623,8 +659,21 @@ class Tab(QScrollArea):
             if lang in field_tab[0]:
                 path_name_lst = path_name_lst.replace(lang, "")
                 text_name_lst = text_name_lst.replace(lang, "")
-        tab_all.lst[path_name_lst]["value"][index_images] = name
-        tab_all.lst[text_name_lst]["value"][index_images] = string
+
+        path_is_changed = tab_all.lst[path_name_lst]["value"][index_images] != name
+        text_is_changed = tab_all.lst[text_name_lst]["value"][index_images] != string
+
+        # If the path is changed, we update the path for the current image
+        if path_is_changed:
+            tab_all.lst[path_name_lst]["value"][index_images] = name
+
+        # If the text is changed, we update the text only for the corresponding language
+        if text_is_changed:
+            lang_tab = self.accessibleName()
+            if lang_tab == LANGUAGES[0]:
+                lang_tab = ""
+            tab_all.lst[text_name_lst]["value" + lang_tab][index_images] = string
+
         self.updateField.emit(self, True)
 
     def get_parent(self, parent, name=None, firstAccessibleName=False):
@@ -792,11 +841,24 @@ class Tab(QScrollArea):
 
                         doc_id = ident.split("-")[1]
                         if "imagesPath-" + doc_id in tab_all.lst:
+                            lang_tab = ""
+                            if self.accessibleName() != LANGUAGES[0]:
+                                lang_tab = self.accessibleName()
                             paths = tab_all.lst["imagesPath-" + doc_id]["value"]
-                            texts = tab_all.lst["imagesText-" + doc_id]["value"]
-                            history = tab_all.lst["imagesHistory-" + doc_id]["value"]
+                            texts = tab_all.lst["imagesText-" + doc_id]["value" + lang_tab] if \
+                                "value" + lang_tab in tab_all.lst["imagesText-" + doc_id] else\
+                                tab_all.lst["imagesText-" + doc_id]["value"]
+
+                            history = tab_all.lst["imagesHistory-" + doc_id]["value" + lang_tab] if \
+                                "value" + lang_tab in tab_all.lst["imagesHistory-" + doc_id] else\
+                                tab_all.lst["imagesHistory-" + doc_id]["value"]
                             for index in range(len(texts)):
                                 self.lst_images[doc_id] += [index]
+                                for lang in LANGUAGES:
+                                    if lang != LANGUAGES[0]:
+                                        if doc_id not in self.lst_images[lang]:
+                                            self.lst_images[lang][doc_id] = []
+                                        self.lst_images[lang][doc_id] += [index]
                                 widget.add_chooser(
                                     paths[index], texts[index], history)
                             widget.set_history(history)
