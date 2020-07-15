@@ -1,11 +1,12 @@
 """Modules that create the combox box history in order to delete some entries"""
 
 # coding=utf-8
-
+from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtWidgets import (QComboBox, QTreeView, QAbstractItemView, QHeaderView)
 from PyQt5.QtGui import (QStandardItemModel, QStandardItem)
 
 class History(QComboBox):
+    removeItemSignal = pyqtSignal(int)
     """
     Class that represent the history of some fields and allow to delete some entries.
     """
@@ -46,7 +47,7 @@ class History(QComboBox):
             self.view().header().setSectionResizeMode(0, QHeaderView.Stretch)
 
 
-    def removeItem(self, row):
+    def removeItem(self, row, emit=True):
         """
         Remove item at row in the model and the database.
         """
@@ -59,6 +60,8 @@ class History(QComboBox):
             history = database.search_by_id(int(field_tab[1]))[field_tab[0]]
             history.pop(row)
             database.update(int(field_tab[1]), field_tab[0], history)
+        if emit:
+            self.removeItemSignal.emit(row)
 
     def dealWithPressEvent(self, index):
         """
