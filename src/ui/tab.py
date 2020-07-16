@@ -1,7 +1,6 @@
 """Module that generates the different tab types"""
 
 # coding=utf-8
-import os
 from collections import OrderedDict, defaultdict
 from re import sub
 from threading import Thread
@@ -38,11 +37,17 @@ class Tab(QScrollArea):
         self.row = 0
         self.lst = self.head_lst
         self.values = OrderedDict()
+
+        # Defines the possible value for status vuln
         self.valid_status_vuln = ["Vulnerable", "Not Vulnerable"]
+
+        # This allows to have a trace of the added images for all the vulnerabilities in the different languages
         self.lst_images = defaultdict(lambda: list())
         for lang in LANGUAGES:
             if lang != LANGUAGES[0]:
                 self.lst_images[lang] = {}
+
+        # This avoids vulnerability duplication during uploads: ID problem impossible to recover
         self.lst_loaded = {}
 
         self.init_tab()
@@ -96,6 +101,7 @@ class Tab(QScrollArea):
 
         # If the tab is not completely initialized, we do not update since the values are already up to date
         if hasattr(self, 'initialized'):
+
             # Gets first parent with accessible name (the modified field)
             sender = self.get_parent(self.sender(), firstAccessibleName=True)
             if sender is None:
@@ -151,12 +157,18 @@ class Tab(QScrollArea):
         """Writes the history into the database."""
         if len(LANGUAGES) > 1:
             first_lang = True
+
+            # We writes the history of all languages
             for lang in LANGUAGES:
                 history_field_lang_name = history_field_name
+
+                # If it's not the first language, we adds the lang before '-' (ex: riskHistoryFR-...)
                 if first_lang:
                     first_lang = False
                 else:
                     history_field_lang_name = history_field_lang_name.replace("-", lang + "-")
+
+                # A security (old version without the field in the specific language)
                 if history_field_lang_name in self.fields:
                     field_tab = history_field_lang_name.split('-')
                     field_name = history_field_lang_name.replace("History", "")
@@ -167,9 +179,12 @@ class Tab(QScrollArea):
                         int(field_tab[1]))[field_tab[0]]
 
                     if value not in history:
+
+                        # Another security (an old version of history was a string, not a list)
                         if not isinstance(history, list):
                             history = []
                         history.append(value)
+
                     self.database.update(int(field_tab[1]), field_tab[0], history)
                 else:
                     field_tab_lang = history_field_lang_name.split('-')
@@ -177,6 +192,8 @@ class Tab(QScrollArea):
                     vuln = self.database.search_by_id(
                         int(field_tab_lang[1]))
 
+                    # If history field is not present, we put the default_values of history, otherwise
+                    # we update the current history
                     if field_tab_lang[0] in vuln:
                         history = vuln[field_tab_lang[0]]
                         if field_name_lang.split("-")[0] in vuln:
@@ -342,7 +359,8 @@ class Tab(QScrollArea):
             if name.isdigit():
                 doc_id = name
 
-                # Adds value that are not currently present
+                # Adds vulns that are not currently present (not present
+                # or already (with or without the same id) loaded but deleted)
                 if self.add_fct is not None and \
                         (name not in self.lst_loaded and self.database.search_by_id(int(doc_id)) is None)\
                         or (name in self.lst_loaded and self.database.search_by_id(int(self.lst_loaded[name])) is None):
@@ -366,7 +384,7 @@ class Tab(QScrollArea):
                     self.fields["diff-" + str(doc_id)].added()
                     doc_id = str(doc_id)
 
-                # Updates value that are currently present
+                # Updates vulns that are currently present (present or already loaded and still present)
                 elif name in self.lst_loaded or self.database.search_by_id(int(doc_id)) is not None:
                     if name in self.lst_loaded:
                         doc_id = self.lst_loaded[name]
@@ -411,6 +429,7 @@ class Tab(QScrollArea):
                 if "setDate" in dir(field):
                     field.setDate(QDate.fromString(value))
 
+        # We update each 'button script'
         for ident, value in self.fields.items():
             if isinstance(value, SortButton):
                 value.update_values()
@@ -436,6 +455,7 @@ class Tab(QScrollArea):
                 cpt += 1
             self.values["list"] = out_lst
 
+        # We add the images informations to the save file
         if "vulns" in self.fields:
             self.values = self.fields["vulns"].save()
             for ident, elem in self.lst["vulns"]["arg"][0].items():
@@ -559,38 +579,62 @@ class Tab(QScrollArea):
         thread.start()
 
     def add_progress(self, parent, row, column, rowspan, colspan):
+        """This method is called by the ThreadSetStatus to display the progress bar instead
+         of the button 'Calcul status'
+        """
+
+        # The progress bar is stored in the object to be able to delete it at the end of the calculation
         self.progress = QProgressBar(self)
         tab_all = self.get_parent(parent, "vulns").tabs["All"]
         tab_all.grid.addWidget(self.progress, row, column, rowspan, colspan)
         self.last_index = str(0)
 
     def remove_progress(self, parent):
+        """This method is called by the ThreadSetStatus to remove the progress bar at the place
+         of the button 'Calcul status'
+        """
         tab_all = self.get_parent(parent, "vulns").tabs["All"]
         tab_all.grid.removeWidget(self.progress)
         self.progress.deleteLater()
+
+        # We no longer need more the current progress bar
         del self.progress
 
     def update_progress(self, parent, value, indexVuln):
+        """This method is called by the ThreadSetStatus to update the progress bar.
+        It changes the color of the calculated status vuln to see where the
+        calculation is (in addition to the progress bar)
+        """
         self.progress.setValue(value)
         tab_all = self.get_parent(parent, "vulns").tabs["All"]
+
+        # We color the QComboBox corresponding at the indexVuln
         if int(indexVuln) > 0:
             self.fields["isVuln-" + indexVuln.replace("\n", "")].setStyleSheet("background-color: rgb(125, 125, 125)")
+
+        # We remove the color of the last QComboBox colored, if she exist
         if int(self.last_index) > 1:
             self.fields["isVuln-" + self.last_index.replace("\n", "")].setStyleSheet("background-color: None")
         self.last_index = indexVuln
         tab_all.grid.update()
 
     def enable_all_widget(self, value):
+        """This method is called by the ThreadSetStatus to enable all the button/lineedit with the value"""
         if value:
             if int(self.last_index) > 1:
                 self.fields["isVuln-" + self.last_index.replace("\n", "")].setStyleSheet("background-color: None")
         window = self.get_parent(self)
         if not value:
             self.buttons_enable = {}
-        self.set_childrens_enabled(window, value)
+        self.set_childrens_clickabled_enabled(window, value)
 
-    def set_childrens_enabled(self, widget, value):
+    def set_childrens_clickabled_enabled(self, widget, value):
+        """This is a recursive method to go down in the hierarchy and
+         find all QButton and QLineEdit (clickable) to enable them with value"""
         for children in widget.children():
+
+            # If it's a QPushButton, we stores the current enable value to reset the
+            # same value at the end
             if isinstance(children, QPushButton):
                 if value:
                     if children in self.buttons_enable:
@@ -600,14 +644,19 @@ class Tab(QScrollArea):
                     if children.isEnabled() and children.text() == "Run test":
                         children.setStyleSheet("color: Black")
                     children.setEnabled(False)
+
+            # If it's a QLineEdit, we change the styleSheet to allow the user to see the
+            # text (Normally it's gray and very difficult to read)
             elif isinstance(children, QLineEdit):
                 children.setEnabled(value)
                 if value:
                     children.setStyleSheet("color: None; background-color: None")
                 else:
                     children.setStyleSheet("color: Black; background-color: White")
+
+            # Otherwise, we go down in the hierarchy
             else:
-                self.set_childrens_enabled(children, value)
+                self.set_childrens_clickabled_enabled(children, value)
 
     def add_auditor(self):
         """Adds an auditor to the database and displays it."""
@@ -630,7 +679,6 @@ class Tab(QScrollArea):
 
         # Each language has the same path for the same image but different text
         for lang in LANGUAGES:
-            lang_tab = ""
             path_name_lst = field_tab[0] + "Path-" + field_tab[1]
             text_name_lst = field_tab[0] + "Text-" + field_tab[1]
             for language in LANGUAGES:
@@ -665,13 +713,13 @@ class Tab(QScrollArea):
         # We removes the same path and all the texts corresponding to the image
         field_tab = self.sender().accessibleName().split('-')
         for lang in LANGUAGES:
-            lang_tab = ""
             path_name_lst = field_tab[0] + "Path-" + field_tab[1]
             text_name_lst = field_tab[0] + "Text-" + field_tab[1]
             for language in LANGUAGES:
                 if language in field_tab[0]:
                     path_name_lst = path_name_lst.replace(language, "")
                     text_name_lst = text_name_lst.replace(language, "")
+
             if lang == LANGUAGES[0]:
                 index_images = list(self.lst_images[field_tab[1]]).index(index)
                 del self.lst_images[field_tab[1]][index_images]
@@ -860,7 +908,7 @@ class Tab(QScrollArea):
 
         for ident, field in lst.items():
 
-            # If "class" is not in field, then it's only a field for storing data do it's not displayed
+            # If "class" is not in field, then it's only a field for storing data so it's not displayed
             if "class" in field:
                 if "args" in field:
                     widget = field["class"](*(field["args"] + [self]))
