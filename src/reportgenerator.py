@@ -160,6 +160,7 @@ class Generator:
 
         # Place all the images of the vulnerability present in content
         if dic["type"] == "Images":
+            lang_doc = lang if lang != LANGUAGES[0] else ""
 
             # 2 information is available for each image:
             #   The image if the type 'image' is present
@@ -177,7 +178,8 @@ class Generator:
                     type_legend = elem["type"]
 
             imagesPath = content["imagesPath"]["value"]
-            imagesText = content["imagesText"]["value"]
+            imagesText = content["imagesText"]["value" + lang_doc] if "value" + lang_doc in content["imagesText"] \
+                else []
             for index in range(len(imagesText)):
                 if display_image:
                     lst_images.append({"type": "image", "path": imagesPath[index], "maxWidth": 20})
@@ -454,6 +456,6 @@ class Generator:
         json_values = Generator.generate_json(values, template, lang)
 
         doc = Document(docx=REPORT_TEMPLATE_DIR +
-                       template + "/" + REPORT_TEMPLATE_BASE)
+                            template + "/" + REPORT_TEMPLATE_BASE)
         Generator.generate_docx(doc, json_values, template)
         doc.save(output_filename)
