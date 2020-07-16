@@ -8,7 +8,8 @@ from threading import Thread
 
 from PyQt5.QtCore import Qt, QDate, pyqtSignal, QObject
 from PyQt5.QtGui import QPixmap
-from PyQt5.QtWidgets import QScrollArea, QGridLayout, QWidget, QLabel, QLineEdit, QDateEdit, QDialog, QProgressBar
+from PyQt5.QtWidgets import QScrollArea, QGridLayout, QWidget, QLabel, QLineEdit, QDateEdit, QDialog, QProgressBar, \
+    QPushButton
 
 from conf.report import LANGUAGES
 from conf.ui_auditors import add_people
@@ -554,12 +555,14 @@ class Tab(QScrollArea):
         thread.signalsThread.set.connect(self.add_progress)
         thread.signalsThread.remove.connect(self.remove_progress)
         thread.signalsThread.update.connect(self.update_progress)
+        thread.signalsThread.end.connect(self.enable_all_widget)
         thread.start()
 
     def add_progress(self, parent, row, column, rowspan, colspan):
         self.progress = QProgressBar(self)
         tab_all = self.get_parent(parent, "vulns").tabs["All"]
         tab_all.grid.addWidget(self.progress, row, column, rowspan, colspan)
+        self.last_index = str(0)
 
     def remove_progress(self, parent):
         tab_all = self.get_parent(parent, "vulns").tabs["All"]
@@ -567,10 +570,44 @@ class Tab(QScrollArea):
         self.progress.deleteLater()
         del self.progress
 
-    def update_progress(self, parent, value):
+    def update_progress(self, parent, value, indexVuln):
         self.progress.setValue(value)
         tab_all = self.get_parent(parent, "vulns").tabs["All"]
+        if int(indexVuln) > 0:
+            self.fields["isVuln-" + indexVuln.replace("\n", "")].setStyleSheet("background-color: rgb(125, 125, 125)")
+        if int(self.last_index) > 1:
+            self.fields["isVuln-" + self.last_index.replace("\n", "")].setStyleSheet("background-color: None")
+        self.last_index = indexVuln
         tab_all.grid.update()
+
+    def enable_all_widget(self, value):
+        if value:
+            if int(self.last_index) > 1:
+                self.fields["isVuln-" + self.last_index.replace("\n", "")].setStyleSheet("background-color: None")
+        window = self.get_parent(self)
+        if not value:
+            self.buttons_enable = {}
+        self.set_childrens_enabled(window, value)
+
+    def set_childrens_enabled(self, widget, value):
+        for children in widget.children():
+            if isinstance(children, QPushButton):
+                if value:
+                    if children in self.buttons_enable:
+                        children.setEnabled(self.buttons_enable[children])
+                else:
+                    self.buttons_enable[children] = children.isEnabled()
+                    if children.isEnabled() and children.text() == "Run test":
+                        children.setStyleSheet("color: Black")
+                    children.setEnabled(False)
+            elif isinstance(children, QLineEdit):
+                children.setEnabled(value)
+                if value:
+                    children.setStyleSheet("color: None; background-color: None")
+                else:
+                    children.setStyleSheet("color: Black; background-color: White")
+            else:
+                self.set_childrens_enabled(children, value)
 
     def add_auditor(self):
         """Adds an auditor to the database and displays it."""
@@ -1034,9 +1071,10 @@ class Popup(QDialog):
             self.grid.addWidget(QLabel(self.name, self))
 
 class ThreadSignal(QObject):
-    update = pyqtSignal(QWidget, int)
+    update = pyqtSignal(QWidget, int, str)
     set = pyqtSignal(QWidget, int, int, int, int)
     remove = pyqtSignal(QWidget)
+    end = pyqtSignal(bool)
 
 class ThreadSetStatus(Thread):
 
@@ -1049,15 +1087,18 @@ class ThreadSetStatus(Thread):
     def run(self) -> None:
         step = 0
         self.signalsThread.set.emit(self.tab, 1, 6, 1, 3)
-        self.signalsThread.update.emit(self.tab, 0)
+        self.signalsThread.end.emit(False)
+        self.signalsThread.update.emit(self.tab, 0, "0")
         for indexVuln in self.lstVuln:
             self.tab.set_status_vuln(indexVuln, parent=self.tab)
             step += 1
 
             pourc = round((step * 100) / len(self.lstVuln))
-            self.signalsThread.update.emit(self.tab, pourc)
+            index = str(indexVuln)
+            self.signalsThread.update.emit(self.tab, pourc, index)
 
         self.signalsThread.remove.emit(self.tab)
+        self.signalsThread.end.emit(True)
         self.tab.update()
 
 
