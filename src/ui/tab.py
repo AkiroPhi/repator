@@ -309,9 +309,12 @@ class Tab(QScrollArea):
                 enable = True
 
         if enable:
-            self.values[doc_id] = self.database.search_by_id(int(doc_id))
-            if "currentText" in dir(sender):
-                self.values[doc_id]["status"] = sender.currentText()
+            try:
+                self.values[doc_id] = self.database.search_by_id(int(doc_id))
+                if "currentText" in dir(sender):
+                    self.values[doc_id]["status"] = sender.currentText()
+            except:
+                return
         else:
             if doc_id in self.values:
                 del self.values[doc_id]
@@ -783,8 +786,13 @@ class Tab(QScrollArea):
     def set_status_vuln(self, doc_id, dispay_popup_error=False, parent=None):
         """Internal method replacing the variables from the script corresponding with the ID"""
 
-        vuln = self.database.search_by_id(int(doc_id))
-        if "script" in vuln and len(vuln["script"]) > 0:
+        # Sometimes an JSONDecodeError occur without any explication except that it is retrieved from another Thread
+        # To avoid this and a possible removal of vulnerabilities, we recover the error and do nothing
+        try:
+            vuln = self.database.search_by_id(int(doc_id))
+        except:
+            return
+        if "vuln" in locals() and "script" in vuln and len(vuln["script"]) > 0:
             # Gets the Window tab
             if parent is None:
                 tab_window = self.get_parent(self.sender())
@@ -1148,5 +1156,3 @@ class ThreadSetStatus(Thread):
         self.signalsThread.remove.emit(self.tab)
         self.signalsThread.end.emit(True)
         self.tab.update()
-
-
