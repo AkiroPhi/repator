@@ -217,7 +217,10 @@ class Tab(QScrollArea):
                 images_text = tab_all.lst[field_tab[0] + "Text-" + field_tab[1]]["value"]
                 images_history = tab_all.lst[field_tab[0] + "History-" + field_tab[1]]["value"]
             else:
-                images_text = tab_all.lst[field_tab[0] + "Text-" + field_tab[1]]["value" + lang]
+                if "value" + lang not in tab_all.lst[field_tab[0] + "Text-" + field_tab[1]]:
+                    images_text = tab_all.lst[field_tab[0] + "Text-" + field_tab[1]]["value"]
+                else:
+                    images_text = tab_all.lst[field_tab[0] + "Text-" + field_tab[1]]["value" + lang]
                 if "value" + lang not in tab_all.lst[field_tab[0] + "History-" + field_tab[1]]:
                     tab_all.lst[field_tab[0] + "History-" + field_tab[1]]["value" + lang] = ["New observation"]
                 images_history = tab_all.lst[field_tab[0] + "History-" + field_tab[1]]["value" + lang]
@@ -393,6 +396,9 @@ class Tab(QScrollArea):
                             not isinstance(self.fields[name_field + "-" + doc_id], dict):
                         self.fields[name_field + "-" + doc_id].setText(value[name_field])
 
+                    # We updates each images fields
+                    if "images" in name_field and name_field + "-" + doc_id in self.fields:
+                        self.fields[name_field + "-" + doc_id] = value[name_field]
                 self.lst_loaded[name] = doc_id
 
             elif name in self.fields:
