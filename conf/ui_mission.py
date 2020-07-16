@@ -9,7 +9,6 @@ from PyQt5.QtWidgets import QLineEdit, QDateEdit, QComboBox
 from PyQt5.QtCore import QDate
 
 from conf.report import REPORT_TEMPLATE_DIR, LANGUAGES
-from src.ui.ping_tester import PingTesterLine
 
 MISSION = collections.OrderedDict()
 MISSION["client"] = {"label": "Client",
@@ -33,10 +32,10 @@ MISSION["environment"] = {"label": "Environment",
                           "class": QLineEdit,
                           "signal": "textChanged"}
 MISSION["url"] = {"label": "URL",
-                  "class": PingTesterLine,
+                  "class": QLineEdit,
                   "signal": "textChanged"}
 MISSION["ip"] = {"label": "IP",
-                 "class": PingTesterLine,
+                 "class": QLineEdit,
                  "signal": "textChanged"}
 MISSION["template"] = {"label": "Template",
                        "class": QComboBox,
