@@ -9,6 +9,7 @@ from PyQt5.QtWidgets import QWidget, QTabWidget, QPushButton, QGridLayout, QFile
 from PyQt5.QtCore import QCoreApplication, Qt
 
 from conf.ui_vulns_initial import VULNS_INITIAL, add_vuln_initial
+from conf.report import GIT
 from src.dbhandler import DBHandler
 from src.reportgenerator import json, Generator
 from src.ui.tab import Tab
@@ -51,7 +52,7 @@ class Window(QWidget):
         view_changes_btn.clicked.connect(self.view_changes)
         generate_btn = QPushButton("Generate", self)
         generate_btn.clicked.connect(self.generate)
-        git_text = QPushButton("Git connection", self)
+        git_text = QPushButton("Git : " + GIT, self)
         # git_text is connected when git process is running
 
         self.grid = QGridLayout()

@@ -35,7 +35,6 @@ class Git(QObject):
     def init_git(self):
         """Initialises the git repository in a new directory."""
         self.clean_git()
-        print("Init Git in " + DB_VULNS_GIT_DIR + "\nurl : " + GIT)
         self.repo = Repo.init(DB_VULNS_GIT_DIR)
         ssh_cmd = "ssh -i " + SSH_KEY + " -F /dev/null -o NumberOfPasswordPrompts=0 -o StrictHostKeyChecking=no"
         self.repo.git.update_environment(GIT_SSH_COMMAND=ssh_cmd) # set the config ?
@@ -149,6 +148,8 @@ class Git(QObject):
         for window in self.app.topLevelWidgets():
             if window.windowTitle() == "Diffs":
                 window.refresh_tab_widget()
+            elif window.windowTitle() == "Repator":
+                self.update_changes_buttons(window)
 
     def git_routine(self):
         """Sets up the git subprocess"""
@@ -173,7 +174,7 @@ class Git(QObject):
             #                           \-->
             if "Authentication failed" in err.stderr:
                 self.undo_last_commit()
-                print("logon failed")
+                # QmessageBox ??
                 return False
             else:
                 raise err

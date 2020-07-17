@@ -495,11 +495,11 @@ class VulnsGit(QWidget):
                         n2 - i, QColor(BLUE), Qt.ForegroundRole)
                     VulnsGit.set_style(tab, BLUE, field_names[0])
             if diff > 0:
-                for i in range(1, diff+1): # the first text is always the same (New /sommething/)
+                for i in range(1, diff+1): # the first text is always the same (New /something/)
                     fields[1].setItemData(i, QColor(RED), Qt.ForegroundRole)
                     VulnsGit.set_style(tab, BLUE, field_names[0])
             elif diff < 0:
-                for i in range(1, 1-diff): # the first text is always the same (New /sommething/)
+                for i in range(1, 1-diff): # the first text is always the same (New /something/)
                     fields[2].setItemData(i, QColor(GREEN), Qt.ForegroundRole)
                     VulnsGit.set_style(tab, BLUE, field_names[0])
             if not min_count and diff > 0:

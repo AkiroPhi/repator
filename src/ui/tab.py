@@ -359,8 +359,7 @@ class Tab(QScrollArea):
         self.updateField.emit(None, False)
 
     def save(self, database=False):
-        """Saves the values of lst into self.values and takes the values from the database to save
-        them into self.values.
+        """Saves the values of lst into self.values and takes the values from the database to save them into self.values.
         """
         if "list" in self.fields:
             lst = self.fields["list"]

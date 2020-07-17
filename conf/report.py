@@ -21,8 +21,6 @@ CVSS = {"AV", "AC", "PR", "UI", "S", "C", "I", "A"}
 HISTORIES = {"reco", "observPos", "observNeg", "risk"}
 
 GIT = "git@127.0.0.1:~/vulnerabilities.git"
-GIT = "git@github.com:AkiroPhi/vulnerabilities.git"
-#GIT = "https://github.com/AkiroPhi/vulnerabilities.git"
 SSH_KEY = "~/.ssh/id_rsa"
-REFRESH_RATE = 10
+REFRESH_RATE = 60*5 # 5 minutes
 COMMIT_MESSAGE = "Commit auto"
