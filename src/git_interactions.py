@@ -35,9 +35,8 @@ class Git(QObject):
     def init_git(self):
         """Initialises the git repository in a new directory."""
         self.clean_git()
-        print("Init Git in " + DB_VULNS_GIT_DIR + "\nurl : " + GIT)
         self.repo = Repo.init(DB_VULNS_GIT_DIR)
-        ssh_cmd = "ssh -i " + SSH_KEY + " -F /dev/null -o NumberOfPasswordPrompts=0"
+        ssh_cmd = "ssh -i " + SSH_KEY + " -F /dev/null -o NumberOfPasswordPrompts=0 -o StrictHostKeyChecking=no"
         self.repo.git.update_environment(GIT_SSH_COMMAND=ssh_cmd) # set the config ?
         self.repo.create_remote('origin', url=GIT)
 
@@ -95,7 +94,7 @@ class Git(QObject):
             print(err)
             self.git_reachable = False
 
-        self.update_changes_buttons(repator, diffs)
+        self.update_changes_buttons(repator)
         return ret_value
 
 
@@ -121,7 +120,7 @@ class Git(QObject):
             self.git_update()
             time.sleep(REFRESH_RATE)
 
-    def update_changes_buttons(self, repator, diffs):
+    def update_changes_buttons(self, repator):
         """Updates View changes and refresh colors"""
         view_change_button = repator.layout().itemAt(3).widget()
         git_connection = repator.layout().itemAt(5).widget()
@@ -131,6 +130,9 @@ class Git(QObject):
             if self.vulnerabilities_changed(): # if the vulnerabilities  aren't hidden
                 view_change_button.setStyleSheet(
                     "QPushButton { background-color : orange }")
+            else:
+                view_change_button.setStyleSheet(
+                    "QPushButton { background-color : light gray }")
         else:
             git_connection.setStyleSheet("QPushButton { background-color : red }")
             view_change_button.setStyleSheet(
@@ -146,6 +148,8 @@ class Git(QObject):
         for window in self.app.topLevelWidgets():
             if window.windowTitle() == "Diffs":
                 window.refresh_tab_widget()
+            elif window.windowTitle() == "Repator":
+                self.update_changes_buttons(window)
 
     def git_routine(self):
         """Sets up the git subprocess"""
@@ -166,9 +170,11 @@ class Git(QObject):
         try:
             self.repo.remote().push('master')
         except GitCommandError as err:
+            #TODO deal with other error ---> no right to push
+            #                           \-->
             if "Authentication failed" in err.stderr:
                 self.undo_last_commit()
-                print("logon failed")
+                # QmessageBox ??
                 return False
             else:
                 raise err

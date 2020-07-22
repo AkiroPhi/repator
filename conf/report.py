@@ -16,11 +16,11 @@ RED = '#ff0000'
 BLUE = '#4169e1'
 DEFAULT = '#000000'
 COLORS = [BLUE, GREEN, RED, DEFAULT]
-HEADERS = {"category", "sub_category", "name", "labelNeg", "labelPos"}
+HEADERS = {"category", "sub_category", "name", "labelNeg", "labelPos", "script", "regexVuln", "regexNotVuln"}
 CVSS = {"AV", "AC", "PR", "UI", "S", "C", "I", "A"}
 HISTORIES = {"reco", "observPos", "observNeg", "risk"}
 
 GIT = "git@127.0.0.1:~/vulnerabilities.git"
 SSH_KEY = "~/.ssh/id_rsa"
-REFRESH_RATE = 10
+REFRESH_RATE = 60*5 # 5 minutes
 COMMIT_MESSAGE = "Commit auto"

@@ -183,7 +183,7 @@ class Tab(QScrollArea):
                         # Another security (an old version of history was a string, not a list)
                         if not isinstance(history, list):
                             history = []
-                        history.append(value)
+                        history.insert(1, value)
 
                     self.database.update(int(field_tab[1]), field_tab[0], history)
                 else:
@@ -199,7 +199,7 @@ class Tab(QScrollArea):
                         if field_name_lang.split("-")[0] in vuln:
                             value = vuln[field_name_lang.split("-")[0]]
                             if value not in history:
-                                history.append(value)
+                                history.insert(1, value)
                             self.database.update(int(field_tab_lang[1]), field_tab_lang[0], history)
                     else:
                         self.database.update(int(field_tab_lang[1]), field_tab_lang[0],
@@ -215,8 +215,9 @@ class Tab(QScrollArea):
                     int(field_tab[1]))[field_tab[0]]
 
                 if value not in history:
-                    history.append(value)
+                    history.insert(1, value)
                 self.database.update(int(field_tab[1]), field_tab[0], history)
+
 
     def save_history_image(self, history_field_name):
         """Updates the images history."""
@@ -244,7 +245,7 @@ class Tab(QScrollArea):
                 images_history = tab_all.lst[field_tab[0] + "History-" + field_tab[1]]["value" + lang]
             for index in range(len(images_text)):
                 if images_text[index] not in images_history:
-                    images_history.append(images_text[index])
+                    images_history.insert(1, images_text[index])
 
     def save_histories(self):
         """Writes all histories into the database."""
@@ -439,8 +440,7 @@ class Tab(QScrollArea):
         self.updateField.emit(None, False)
 
     def save(self, database=False):
-        """Saves the values of lst into self.values and takes the values from the database to save
-        them into self.values.
+        """Saves the values of lst into self.values and takes the values from the database to save them into self.values.
         """
         if "list" in self.fields:
             lst = self.fields["list"]
