@@ -1,13 +1,14 @@
 """Module that generates the different tab types"""
 
 # coding=utf-8
-import os
 from collections import OrderedDict, defaultdict
 from re import sub
+from threading import Thread
 
-from PyQt5.QtCore import Qt, QDate, pyqtSignal
+from PyQt5.QtCore import Qt, QDate, pyqtSignal, QObject
 from PyQt5.QtGui import QPixmap
-from PyQt5.QtWidgets import QScrollArea, QGridLayout, QWidget, QLabel, QLineEdit, QDateEdit, QDialog
+from PyQt5.QtWidgets import QScrollArea, QGridLayout, QWidget, QLabel, QLineEdit, QDateEdit, QDialog, QProgressBar, \
+    QPushButton
 
 from conf.report import LANGUAGES
 from conf.ui_auditors import add_people
@@ -15,7 +16,6 @@ from conf.ui_vuln_edit import vuln_editing
 from conf.ui_vulns import add_vuln
 from src.status_vuln import status_vuln
 from src.cvss import cvssv3, risk_level
-from src.dbhandler import DBHandler
 from src.ui.diff_status import DiffStatus
 from src.ui.sort_button import SortButton
 
@@ -26,17 +26,28 @@ class Tab(QScrollArea):
     # Whenever a tab field is modified, transmits an 'updateField' signal
     updateField = pyqtSignal(QScrollArea, bool, name="updateField")
 
-    def __init__(self, parent, lst, database=None, add_fct=None):
+    def __init__(self, parent, lst, database=None, add_fct=None, accessibleName=None):
         super().__init__(parent)
         self.head_lst = lst
         self.database = database
         self.add_fct = add_fct
         self._parent = parent
+        if accessibleName is not None:
+            self.setAccessibleName(accessibleName)
         self.row = 0
         self.lst = self.head_lst
         self.values = OrderedDict()
+
+        # Defines the possible value for status vuln
         self.valid_status_vuln = ["Vulnerable", "Not Vulnerable"]
+
+        # This allows to have a trace of the added images for all the vulnerabilities in the different languages
         self.lst_images = defaultdict(lambda: list())
+        for lang in LANGUAGES:
+            if lang != LANGUAGES[0]:
+                self.lst_images[lang] = {}
+
+        # This avoids vulnerability duplication during uploads: ID problem impossible to recover
         self.lst_loaded = {}
 
         self.init_tab()
@@ -90,6 +101,7 @@ class Tab(QScrollArea):
 
         # If the tab is not completely initialized, we do not update since the values are already up to date
         if hasattr(self, 'initialized'):
+
             # Gets first parent with accessible name (the modified field)
             sender = self.get_parent(self.sender(), firstAccessibleName=True)
             if sender is None:
@@ -134,7 +146,7 @@ class Tab(QScrollArea):
         history_field_name = sender.accessibleName()
         doc = self.database.search_by_id(
             int(history_field_name.split('-')[-1]))
-        field = sub(r'History.*', 'History', history_field_name)
+        field = sub(r'-.*', '', history_field_name)
         if sender.currentIndex() != 0:
             field_name = history_field_name.replace("History", "")
 
@@ -143,18 +155,68 @@ class Tab(QScrollArea):
 
     def save_history(self, history_field_name):
         """Writes the history into the database."""
-        if self.fields[history_field_name].currentIndex() == 0:
-            field_tab = history_field_name.split('-')
-            field_name = history_field_name.replace("History", "")
+        if len(LANGUAGES) > 1:
+            first_lang = True
 
-            value = self.fields[field_name].to_plain_text()
+            # We writes the history of all languages
+            for lang in LANGUAGES:
+                history_field_lang_name = history_field_name
 
-            history = self.database.search_by_id(
-                int(field_tab[1]))[field_tab[0]]
+                # If it's not the first language, we adds the lang before '-' (ex: riskHistoryFR-...)
+                if first_lang:
+                    first_lang = False
+                else:
+                    history_field_lang_name = history_field_lang_name.replace("-", lang + "-")
 
-            if value not in history:
-                history.append(value)
-            self.database.update(int(field_tab[1]), field_tab[0], history)
+                # A security (old version without the field in the specific language)
+                if history_field_lang_name in self.fields:
+                    field_tab = history_field_lang_name.split('-')
+                    field_name = history_field_lang_name.replace("History", "")
+
+                    value = self.fields[field_name].to_plain_text()
+
+                    history = self.database.search_by_id(
+                        int(field_tab[1]))[field_tab[0]]
+
+                    if value not in history:
+
+                        # Another security (an old version of history was a string, not a list)
+                        if not isinstance(history, list):
+                            history = []
+                        history.append(value)
+
+                    self.database.update(int(field_tab[1]), field_tab[0], history)
+                else:
+                    field_tab_lang = history_field_lang_name.split('-')
+                    field_name_lang = history_field_lang_name.replace("History", "")
+                    vuln = self.database.search_by_id(
+                        int(field_tab_lang[1]))
+
+                    # If history field is not present, we put the default_values of history, otherwise
+                    # we update the current history
+                    if field_tab_lang[0] in vuln:
+                        history = vuln[field_tab_lang[0]]
+                        if field_name_lang.split("-")[0] in vuln:
+                            value = vuln[field_name_lang.split("-")[0]]
+                            if value not in history:
+                                history.append(value)
+                            self.database.update(int(field_tab_lang[1]), field_tab_lang[0], history)
+                    else:
+                        self.database.update(int(field_tab_lang[1]), field_tab_lang[0],
+                                             self.database.default_values[history_field_name.split("-")[0]])
+        else:
+            if self.fields[history_field_name].currentIndex() == 0:
+                field_tab = history_field_name.split('-')
+                field_name = history_field_name.replace("History", "")
+
+                value = self.fields[field_name].to_plain_text()
+
+                history = self.database.search_by_id(
+                    int(field_tab[1]))[field_tab[0]]
+
+                if value not in history:
+                    history.append(value)
+                self.database.update(int(field_tab[1]), field_tab[0], history)
 
     def save_history_image(self, history_field_name):
         """Updates the images history."""
@@ -167,12 +229,22 @@ class Tab(QScrollArea):
         tab_all = tab_vuln.tabs["All"]
         field_tab = history_field_name.split('-')
 
-        # Gets the fields containing the history of images texts and update it if necessary
-        images_text = tab_all.lst[field_tab[0] + "Text-" + field_tab[1]]["value"]
-        images_history = tab_all.lst[field_tab[0] + "History-" + field_tab[1]]["value"]
-        for index in range(len(images_text)):
-            if images_text[index] not in images_history:
-                images_history.append(images_text[index])
+        # Gets the fields containing the history of images texts and update it if necessary for each languages
+        for lang in LANGUAGES:
+            if lang == LANGUAGES[0]:
+                images_text = tab_all.lst[field_tab[0] + "Text-" + field_tab[1]]["value"]
+                images_history = tab_all.lst[field_tab[0] + "History-" + field_tab[1]]["value"]
+            else:
+                if "value" + lang not in tab_all.lst[field_tab[0] + "Text-" + field_tab[1]]:
+                    images_text = tab_all.lst[field_tab[0] + "Text-" + field_tab[1]]["value"]
+                else:
+                    images_text = tab_all.lst[field_tab[0] + "Text-" + field_tab[1]]["value" + lang]
+                if "value" + lang not in tab_all.lst[field_tab[0] + "History-" + field_tab[1]]:
+                    tab_all.lst[field_tab[0] + "History-" + field_tab[1]]["value" + lang] = ["New observation"]
+                images_history = tab_all.lst[field_tab[0] + "History-" + field_tab[1]]["value" + lang]
+            for index in range(len(images_text)):
+                if images_text[index] not in images_history:
+                    images_history.append(images_text[index])
 
     def save_histories(self):
         """Writes all histories into the database."""
@@ -237,9 +309,12 @@ class Tab(QScrollArea):
                 enable = True
 
         if enable:
-            self.values[doc_id] = self.database.search_by_id(int(doc_id))
-            if "currentText" in dir(sender):
-                self.values[doc_id]["status"] = sender.currentText()
+            try:
+                self.values[doc_id] = self.database.search_by_id(int(doc_id))
+                if "currentText" in dir(sender):
+                    self.values[doc_id]["status"] = sender.currentText()
+            except:
+                return
         else:
             if doc_id in self.values:
                 del self.values[doc_id]
@@ -269,11 +344,7 @@ class Tab(QScrollArea):
         # Creates a .json containing auditors and clients
         # Updates currents auditors and clients
         if self.database is not None and "db" in values:
-            db_path = self.database.path
-            default_values = self.database.default_values
-            os.remove(db_path)
-            self.database.close()
-            self.database = DBHandler(db_path, default_values)
+            self.database.purge()
             self.database.insert_multiple(values["db"])
 
             if self.add_fct is not None:
@@ -291,7 +362,8 @@ class Tab(QScrollArea):
             if name.isdigit():
                 doc_id = name
 
-                # Adds value that are not currently present
+                # Adds vulns that are not currently present (not present
+                # or already (with or without the same id) loaded but deleted)
                 if self.add_fct is not None and \
                         (name not in self.lst_loaded and self.database.search_by_id(int(doc_id)) is None)\
                         or (name in self.lst_loaded and self.database.search_by_id(int(self.lst_loaded[name])) is None):
@@ -315,7 +387,7 @@ class Tab(QScrollArea):
                     self.fields["diff-" + str(doc_id)].added()
                     doc_id = str(doc_id)
 
-                # Updates value that are currently present
+                # Updates vulns that are currently present (present or already loaded and still present)
                 elif name in self.lst_loaded or self.database.search_by_id(int(doc_id)) is not None:
                     if name in self.lst_loaded:
                         doc_id = self.lst_loaded[name]
@@ -346,6 +418,9 @@ class Tab(QScrollArea):
                             not isinstance(self.fields[name_field + "-" + doc_id], dict):
                         self.fields[name_field + "-" + doc_id].setText(value[name_field])
 
+                    # We updates each images fields
+                    if "images" in name_field and name_field + "-" + doc_id in self.fields:
+                        self.fields[name_field + "-" + doc_id] = value[name_field]
                 self.lst_loaded[name] = doc_id
 
             elif name in self.fields:
@@ -357,6 +432,7 @@ class Tab(QScrollArea):
                 if "setDate" in dir(field):
                     field.setDate(QDate.fromString(value))
 
+        # We update each 'button script'
         for ident, value in self.fields.items():
             if isinstance(value, SortButton):
                 value.update_values()
@@ -382,10 +458,15 @@ class Tab(QScrollArea):
                 cpt += 1
             self.values["list"] = out_lst
 
+        # We add the images informations to the save file
         if "vulns" in self.fields:
             self.values = self.fields["vulns"].save()
+            for ident, elem in self.lst["vulns"]["arg"][0].items():
+                field = ident.split("-")
+                if len(field) > 1 and field[0].startswith("images") and field[1] in self.values:
+                    self.values[field[1]][field[0]] = elem
             self.values = OrderedDict(
-                sorted(self.fields["vulns"].save().items()))
+                sorted(self.values.items()))
 
         if database and self.database is not None:
             self.values["db"] = self.database.get_all()
@@ -456,7 +537,6 @@ class Tab(QScrollArea):
             del self.values[doc_id]
         self.database.delete(int(doc_id))
         self.fields["categorySort"].update_values()
-        tab_Vulns = self.get_parent(self).tabs["Vulns"]
 
     def add_vuln(self):
         """Adds a vuln to the database and displays it as a newly added vuln."""
@@ -469,7 +549,6 @@ class Tab(QScrollArea):
         self.fields["buttonScript-" + str(doc_id)].setEnabled(False)
         self.fields["categorySort"].connect_buttons(doc_id)
         self.fields["diff-" + str(doc_id)].added()
-        tab_Vulns = self.get_parent(self).tabs["Vulns"]
 
     def status_vuln(self):
         """Calculates the status of the selected vulnerability.
@@ -485,10 +564,102 @@ class Tab(QScrollArea):
     def status_vulns(self):
         """Calculates the status of all vulnerabilities.
         This method is called by a signal"""
+
+        lstVulns = []
         for name in self.fields:
             split = name.split("-")
-            if len(split) == 2 and split[0] == "id" and len(split[1]) > 0:
-                self.set_status_vuln(split[1])
+            if len(split) == 2 and split[0] == "id" and len(split[1]) > 0 and\
+                    ("buttonScript-" + split[1]) in self.fields and self.fields["buttonScript-" + split[1]].isEnabled():
+                lstVulns.append(split[1])
+
+        # Creates a thread allowing to calculate the vulns status without blocking the GUI
+        # Adds a progress bar in place of the button displaying the progress of the calculation
+        thread = ThreadSetStatus(self, lstVulns)
+        thread.signalsThread.set.connect(self.add_progress)
+        thread.signalsThread.remove.connect(self.remove_progress)
+        thread.signalsThread.update.connect(self.update_progress)
+        thread.signalsThread.end.connect(self.enable_all_widget)
+        thread.start()
+
+    def add_progress(self, parent, row, column, rowspan, colspan):
+        """This method is called by the ThreadSetStatus to display the progress bar instead
+         of the button 'Calcul status'
+        """
+
+        # The progress bar is stored in the object to be able to delete it at the end of the calculation
+        self.progress = QProgressBar(self)
+        tab_all = self.get_parent(parent, "vulns").tabs["All"]
+        tab_all.grid.addWidget(self.progress, row, column, rowspan, colspan)
+        self.last_index = str(0)
+
+    def remove_progress(self, parent):
+        """This method is called by the ThreadSetStatus to remove the progress bar at the place
+         of the button 'Calcul status'
+        """
+        tab_all = self.get_parent(parent, "vulns").tabs["All"]
+        tab_all.grid.removeWidget(self.progress)
+        self.progress.deleteLater()
+
+        # We no longer need more the current progress bar
+        del self.progress
+
+    def update_progress(self, parent, value, indexVuln):
+        """This method is called by the ThreadSetStatus to update the progress bar.
+        It changes the color of the calculated status vuln to see where the
+        calculation is (in addition to the progress bar)
+        """
+        self.progress.setValue(value)
+        tab_all = self.get_parent(parent, "vulns").tabs["All"]
+
+        # We color the QComboBox corresponding at the indexVuln
+        if int(indexVuln) > 0:
+            self.fields["isVuln-" + indexVuln.replace("\n", "")].setStyleSheet("background-color: rgb(125, 125, 125)")
+
+        # We remove the color of the last QComboBox colored, if she exist
+        if int(self.last_index) > 1:
+            self.fields["isVuln-" + self.last_index.replace("\n", "")].setStyleSheet("background-color: None")
+        self.last_index = indexVuln
+        tab_all.grid.update()
+
+    def enable_all_widget(self, value):
+        """This method is called by the ThreadSetStatus to enable all the button/lineedit with the value"""
+        if value:
+            if int(self.last_index) > 1:
+                self.fields["isVuln-" + self.last_index.replace("\n", "")].setStyleSheet("background-color: None")
+        window = self.get_parent(self)
+        if not value:
+            self.buttons_enable = {}
+        self.set_childrens_clickabled_enabled(window, value)
+
+    def set_childrens_clickabled_enabled(self, widget, value):
+        """This is a recursive method to go down in the hierarchy and
+         find all QButton and QLineEdit (clickable) to enable them with value"""
+        for children in widget.children():
+
+            # If it's a QPushButton, we stores the current enable value to reset the
+            # same value at the end
+            if isinstance(children, QPushButton):
+                if value:
+                    if children in self.buttons_enable:
+                        children.setEnabled(self.buttons_enable[children])
+                else:
+                    self.buttons_enable[children] = children.isEnabled()
+                    if children.isEnabled() and children.text() == "Run test":
+                        children.setStyleSheet("color: Black")
+                    children.setEnabled(False)
+
+            # If it's a QLineEdit, we change the styleSheet to allow the user to see the
+            # text (Normally it's gray and very difficult to read)
+            elif isinstance(children, QLineEdit):
+                children.setEnabled(value)
+                if value:
+                    children.setStyleSheet("color: None; background-color: None")
+                else:
+                    children.setStyleSheet("color: Black; background-color: White")
+
+            # Otherwise, we go down in the hierarchy
+            else:
+                self.set_childrens_clickabled_enabled(children, value)
 
     def add_auditor(self):
         """Adds an auditor to the database and displays it."""
@@ -508,16 +679,30 @@ class Tab(QScrollArea):
             return
 
         field_tab = self.sender().accessibleName().split('-')
-        self.lst_images[field_tab[1]] += [index]
 
-        path_name_lst = field_tab[0] + "Path-" + field_tab[1]
-        text_name_lst = field_tab[0] + "Text-" + field_tab[1]
+        # Each language has the same path for the same image but different text
         for lang in LANGUAGES:
-            if lang in field_tab[0]:
-                path_name_lst = path_name_lst.replace(lang, "")
-                text_name_lst = text_name_lst.replace(lang, "")
-        tab_all.lst[path_name_lst]["value"] += [name]
-        tab_all.lst[text_name_lst]["value"] += [""]
+            path_name_lst = field_tab[0] + "Path-" + field_tab[1]
+            text_name_lst = field_tab[0] + "Text-" + field_tab[1]
+            for language in LANGUAGES:
+                if language in field_tab[0]:
+                    path_name_lst = path_name_lst.replace(language, "")
+                    text_name_lst = text_name_lst.replace(language, "")
+
+            if lang == LANGUAGES[0]:
+                self.lst_images[field_tab[1]] += [index]
+                tab_all.lst[path_name_lst]["value"] += [name]
+                tab_all.lst[text_name_lst]["value"] += [""]
+            else:
+                lang_tab = lang
+                if field_tab[1] not in self.lst_images[lang]:
+                    self.lst_images[lang][field_tab[1]] = []
+                self.lst_images[lang][field_tab[1]] += [index]
+
+                if "value" + lang_tab not in tab_all.lst[text_name_lst]:
+                    tab_all.lst[text_name_lst]["value" + lang_tab] = []
+                tab_all.lst[text_name_lst]["value" + lang_tab] += [""]
+
         self.updateField.emit(self, True)
 
     def remove_image(self, index):
@@ -528,18 +713,27 @@ class Tab(QScrollArea):
         if tab_all is None:
             return
 
+        # We removes the same path and all the texts corresponding to the image
         field_tab = self.sender().accessibleName().split('-')
-        index_images = list(self.lst_images[field_tab[1]]).index(index)
-        del self.lst_images[field_tab[1]][index_images]
-
-        path_name_lst = field_tab[0] + "Path-" + field_tab[1]
-        text_name_lst = field_tab[0] + "Text-" + field_tab[1]
         for lang in LANGUAGES:
-            if lang in field_tab[0]:
-                path_name_lst = path_name_lst.replace(lang, "")
-                text_name_lst = text_name_lst.replace(lang, "")
-        del tab_all.lst[path_name_lst]["value"][index_images]
-        del tab_all.lst[text_name_lst]["value"][index_images]
+            path_name_lst = field_tab[0] + "Path-" + field_tab[1]
+            text_name_lst = field_tab[0] + "Text-" + field_tab[1]
+            for language in LANGUAGES:
+                if language in field_tab[0]:
+                    path_name_lst = path_name_lst.replace(language, "")
+                    text_name_lst = text_name_lst.replace(language, "")
+
+            if lang == LANGUAGES[0]:
+                index_images = list(self.lst_images[field_tab[1]]).index(index)
+                del self.lst_images[field_tab[1]][index_images]
+                del tab_all.lst[path_name_lst]["value"][index_images]
+                del tab_all.lst[text_name_lst]["value"][index_images]
+            else:
+                lang_tab = lang
+                index_images_lang = list(self.lst_images[lang_tab][field_tab[1]]).index(index)
+                del self.lst_images[lang_tab][field_tab[1]][index_images_lang]
+                del tab_all.lst[text_name_lst]["value" + lang_tab][index_images]
+
         self.updateField.emit(self, True)
 
     def modify_image(self, index, name, string):
@@ -559,8 +753,21 @@ class Tab(QScrollArea):
             if lang in field_tab[0]:
                 path_name_lst = path_name_lst.replace(lang, "")
                 text_name_lst = text_name_lst.replace(lang, "")
-        tab_all.lst[path_name_lst]["value"][index_images] = name
-        tab_all.lst[text_name_lst]["value"][index_images] = string
+
+        path_is_changed = tab_all.lst[path_name_lst]["value"][index_images] != name
+        text_is_changed = tab_all.lst[text_name_lst]["value"][index_images] != string
+
+        # If the path is changed, we update the path for the current image
+        if path_is_changed:
+            tab_all.lst[path_name_lst]["value"][index_images] = name
+
+        # If the text is changed, we update the text only for the corresponding language
+        if text_is_changed:
+            lang_tab = self.accessibleName()
+            if lang_tab == LANGUAGES[0]:
+                lang_tab = ""
+            tab_all.lst[text_name_lst]["value" + lang_tab][index_images] = string
+
         self.updateField.emit(self, True)
 
     def get_parent(self, parent, name=None, firstAccessibleName=False):
@@ -576,13 +783,21 @@ class Tab(QScrollArea):
                 return None if name is not None else sender
             sender = sender.parent()
 
-    def set_status_vuln(self, doc_id, dispay_popup_error=False):
+    def set_status_vuln(self, doc_id, dispay_popup_error=False, parent=None):
         """Internal method replacing the variables from the script corresponding with the ID"""
 
-        vuln = self.database.search_by_id(int(doc_id))
-        if "script" in vuln and len(vuln["script"]) > 0:
+        # Sometimes an JSONDecodeError occur without any explication except that it is retrieved from another Thread
+        # To avoid this and a possible removal of vulnerabilities, we recover the error and do nothing
+        try:
+            vuln = self.database.search_by_id(int(doc_id))
+        except:
+            return
+        if "vuln" in locals() and "script" in vuln and len(vuln["script"]) > 0:
             # Gets the Window tab
-            tab_window = self.get_parent(self.sender())
+            if parent is None:
+                tab_window = self.get_parent(self.sender())
+            else:
+                tab_window = self.get_parent(parent)
             if tab_window is None:
                 return
 
@@ -603,7 +818,10 @@ class Tab(QScrollArea):
                             doc_id].setCurrentText(result[0])
             elif dispay_popup_error and (result is None or not result[0] in self.valid_status_vuln):
                 self.display_error_test(result)
-        tab_Vulns = self.get_parent(self.sender()).tabs["Vulns"]
+        if parent is None:
+            tab_Vulns = self.get_parent(self.sender()).tabs["Vulns"]
+        else:
+            tab_Vulns = self.get_parent(parent).tabs["Vulns"]
         tab_Vulns.updateField.emit(tab_Vulns, True)
 
     def display_help_var(self):
@@ -698,7 +916,7 @@ class Tab(QScrollArea):
 
         for ident, field in lst.items():
 
-            # If "class" is not in field, then it's only a field for storing data do it's not displayed
+            # If "class" is not in field, then it's only a field for storing data so it's not displayed
             if "class" in field:
                 if "args" in field:
                     widget = field["class"](*(field["args"] + [self]))
@@ -722,11 +940,24 @@ class Tab(QScrollArea):
 
                         doc_id = ident.split("-")[1]
                         if "imagesPath-" + doc_id in tab_all.lst:
+                            lang_tab = ""
+                            if self.accessibleName() != LANGUAGES[0]:
+                                lang_tab = self.accessibleName()
                             paths = tab_all.lst["imagesPath-" + doc_id]["value"]
-                            texts = tab_all.lst["imagesText-" + doc_id]["value"]
-                            history = tab_all.lst["imagesHistory-" + doc_id]["value"]
+                            texts = tab_all.lst["imagesText-" + doc_id]["value" + lang_tab] if \
+                                "value" + lang_tab in tab_all.lst["imagesText-" + doc_id] else\
+                                tab_all.lst["imagesText-" + doc_id]["value"]
+
+                            history = tab_all.lst["imagesHistory-" + doc_id]["value" + lang_tab] if \
+                                "value" + lang_tab in tab_all.lst["imagesHistory-" + doc_id] else\
+                                tab_all.lst["imagesHistory-" + doc_id]["value"]
                             for index in range(len(texts)):
                                 self.lst_images[doc_id] += [index]
+                                for lang in LANGUAGES:
+                                    if lang != LANGUAGES[0]:
+                                        if doc_id not in self.lst_images[lang]:
+                                            self.lst_images[lang][doc_id] = []
+                                        self.lst_images[lang][doc_id] += [index]
                                 widget.add_chooser(
                                     paths[index], texts[index], history)
                             widget.set_history(history)
@@ -881,9 +1112,10 @@ class ClickableQWidget(QWidget):
 
 
 class Popup(QDialog):
-    def __init__(self, name, parent=None):
+    def __init__(self, name=None, parent=None):
         super().__init__(parent)
-        self.name = name
+        if name is not None:
+            self.name = name
 
         self.grid = QGridLayout()
         self.grid.setSpacing(5)
@@ -891,4 +1123,36 @@ class Popup(QDialog):
         self.grid.setAlignment(Qt.AlignTop)
         self.setLayout(self.grid)
 
-        self.grid.addWidget(QLabel(self.name, self))
+        if name is not None:
+            self.grid.addWidget(QLabel(self.name, self))
+
+class ThreadSignal(QObject):
+    update = pyqtSignal(QWidget, int, str)
+    set = pyqtSignal(QWidget, int, int, int, int)
+    remove = pyqtSignal(QWidget)
+    end = pyqtSignal(bool)
+
+class ThreadSetStatus(Thread):
+
+    def __init__(self, tab, lstVuln):
+        super().__init__()
+        self.tab = tab
+        self.signalsThread = ThreadSignal()
+        self.lstVuln = lstVuln
+
+    def run(self) -> None:
+        step = 0
+        self.signalsThread.set.emit(self.tab, 1, 6, 1, 3)
+        self.signalsThread.end.emit(False)
+        self.signalsThread.update.emit(self.tab, 0, "0")
+        for indexVuln in self.lstVuln:
+            self.tab.set_status_vuln(indexVuln, parent=self.tab)
+            step += 1
+
+            pourc = round((step * 100) / len(self.lstVuln))
+            index = str(indexVuln)
+            self.signalsThread.update.emit(self.tab, pourc, index)
+
+        self.signalsThread.remove.emit(self.tab)
+        self.signalsThread.end.emit(True)
+        self.tab.update()

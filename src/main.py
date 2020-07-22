@@ -6,14 +6,13 @@ from copy import copy
 from os import path
 from configparser import ConfigParser
 from collections import OrderedDict
-from shutil import copyfile
 import fire
 from PyQt5.QtWidgets import QApplication
 
 from conf.ui_mission import MISSION
 from conf.ui_auditors import PEOPLE, add_people
 from conf.ui_vulns import VULNS, add_vuln
-from src.dbhandler import DBHandler, DB_VULNS
+from src.dbhandler import DBHandler
 from src.ui.window import Window
 from src.ui.vulns import Vulns
 from src.git_interactions import Git

@@ -60,12 +60,16 @@
                     "content": "##observNeg##"
                 },
                 {
-                    "type": "Heading 5",
-                    "content": "Images"
-                },
-                {
-                    "type": "Normal",
-                    "content": "##images##"
+                    "type": "Images",
+                    "content": [
+                        {
+                            "type": "image"
+                        },
+                        {
+                            "type": "Normal",
+                            "content": "##legend##"
+                        }
+                    ]
                 },
                 {
                     "type": "Heading 5",
@@ -103,12 +107,16 @@
                     "content": "##observPos##"
                 },
                 {
-                    "type": "Heading 5",
-                    "content": "Images"
-                },
-                {
-                    "type": "Normal",
-                    "content": "##images##"
+                    "type": "Images",
+                    "content": [
+                        {
+                            "type": "image"
+                        },
+                        {
+                            "type": "Normal",
+                            "content": "##legend##"
+                        }
+                    ]
                 },
                 {
                     "type": "Heading 5",

@@ -6,12 +6,15 @@ import re
 import json
 
 from docx import Document
-from docx.shared import Cm
+from PIL import Image
+from docx.shared import Cm, Inches
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from docx.enum.table import WD_CELL_VERTICAL_ALIGNMENT
 
 from conf.report import REPORT_TEMPLATE_DIR, REPORT_TEMPLATE_MAIN, REPORT_TEMPLATE_BASE, LANGUAGES
 from src.cvss import vuln_risk_level, vuln_cvssv3
+
+IMG_NOT_FOUND_DIR = "img/image-not-found.png"
 
 
 class Generator:
@@ -59,17 +62,6 @@ class Generator:
 
     @staticmethod
     def __sub_dict(dic, text):
-        if "##images##" in text:
-            text_images = ""
-            imagesPath = dic["imagesPath"]["value"]
-            imagesText = dic["imagesText"]["value"]
-            for index in range(len(imagesText)):
-                text_with_image = \
-                    "[[IMAGE]]" + imagesPath[index] + "||3[[/IMAGE]]\n" + imagesText[index]
-                text_images += text_with_image + "\n"
-            text = text_images
-            return text
-
         for name, value in dic.items():
             if isinstance(value, str):
                 text = re.sub("##" + name + "##", value, text)
@@ -83,10 +75,10 @@ class Generator:
                 if match is not None:
                     text = re.sub("##" + name + "#" + match.group(1) + ":" + match.group(2) + "##",
                                   value[int(match.group(1)):int(match.group(2))], text)
-            elif isinstance(value,int) or isinstance(value,float):
+            elif isinstance(value, int) or isinstance(value, float):
                 text = re.sub("##" + name + "##", str(value), text)
             else:
-                pass #value should be a list or an orderedDict so nothing to do
+                pass  # value should be a list or an orderedDict so nothing to do
 
         return text
 
@@ -165,6 +157,35 @@ class Generator:
                     l_res.append(template)
             dic["content"] = l_res
             return dic
+
+        # Place all the images of the vulnerability present in content
+        if dic["type"] == "Images":
+            lang_doc = lang if lang != LANGUAGES[0] else ""
+
+            # 2 information is available for each image:
+            #   The image if the type 'image' is present
+            #   The legend if the content '##legend##' is present
+            # We can choose the display by modifying the content in the template
+            display_image = False
+            display_legend = False
+            type_legend = ""
+            lst_images = []
+            for elem in dic["content"]:
+                if "type" in elem and elem["type"] == "image":
+                    display_image = True
+                elif "content" in elem and elem["content"] == "##legend##":
+                    display_legend = True
+                    type_legend = elem["type"]
+
+            imagesPath = content["imagesPath"]["value"]
+            imagesText = content["imagesText"]["value" + lang_doc] if "value" + lang_doc in content["imagesText"] \
+                else []
+            for index in range(len(imagesText)):
+                if display_image:
+                    lst_images.append({"type": "image", "path": imagesPath[index], "maxWidth": 20})
+                if display_legend:
+                    lst_images.append({"type": type_legend, "content": imagesText[index]})
+            dic["content"] = lst_images
 
         if "filer" in dic:
             content = content[dic["filer"]]
@@ -303,15 +324,36 @@ class Generator:
 
         if "type" in json_input:
             if json_input["type"] == "image":
-                width = None
-                height = None
-                if "width" in json_input:
-                    width = Cm(json_input["width"])
-                if "height" in json_input:
-                    height = Cm(json_input["height"])
                 path = json_input["path"]
                 if path[0] != '/':
                     path = REPORT_TEMPLATE_DIR + template + "/" + path
+                try:
+                    image = Image.open(path)
+                    dpi = image.info['dpi'] if 'dpi' in image.info else (300, 300)
+                    width = Inches(image.size[0] / dpi[0]) if "maxWidth" in json_input else None
+                    height = Inches(image.size[1] / dpi[1]) if "maxheight" in json_input else None
+                except:
+                    try:
+                        json_input["path"] = IMG_NOT_FOUND_DIR
+                        path = IMG_NOT_FOUND_DIR
+                        image = Image.open(path)
+                        dpi = image.info['dpi'] if 'dpi' in image.info else (300, 300)
+                        width = Inches(image.size[0] / dpi[0]) if "maxWidth" in json_input else None
+                        height = Inches(image.size[1] / dpi[1]) if "maxheight" in json_input else None
+                    except:
+                        return
+
+                if "width" in json_input:
+                    width = Cm(json_input["width"])
+
+                if width is not None and "maxWidth" in json_input and width > Cm(json_input["maxWidth"]):
+                    width = Cm(json_input["maxWidth"])
+
+                if "height" in json_input:
+                    height = Cm(json_input["height"])
+
+                if height is not None and "maxHeight" in json_input and height > Cm(json_input["maxHeight"]):
+                    height = Cm(json_input["maxHeight"])
                 document.add_picture(path, width, height)
             if json_input["type"] == "table":
                 Generator.__generate_table(document, json_input, template)
@@ -379,12 +421,12 @@ class Generator:
                                 if path[0] != '/':
                                     path = REPORT_TEMPLATE_DIR + template + "/" + path
                                 run.add_picture(
-                                    path, Cm(int(image_split[cpt2+1])))
+                                    path, Cm(int(image_split[cpt2 + 1])))
                             else:
                                 continue
                     elif cpt % 3 == 1:
                         paragraph.add_hyperlink(
-                            hyperlink_split_value, hyperlink_split[cpt+1], style="Hyperlink")
+                            hyperlink_split_value, hyperlink_split[cpt + 1], style="Hyperlink")
                     else:
                         continue
 
@@ -404,9 +446,9 @@ class Generator:
             lang = values["Mission"]["language"]
             if lang != LANGUAGES[0]:
                 for vuln in values["Vulns"].values():
-                    keys = list(vuln.keys()) # copy to avoid iterate on new items
+                    keys = list(vuln.keys())  # copy to avoid iterate on new items
                     for name in keys:
-                        if name.find(lang) == len(name)-len(lang):
+                        if name.find(lang) == len(name) - len(lang):
                             vuln[name[:-len(lang)]] = vuln[name]
         else:
             lang = LANGUAGES[0]
@@ -414,6 +456,6 @@ class Generator:
         json_values = Generator.generate_json(values, template, lang)
 
         doc = Document(docx=REPORT_TEMPLATE_DIR +
-                       template + "/" + REPORT_TEMPLATE_BASE)
+                            template + "/" + REPORT_TEMPLATE_BASE)
         Generator.generate_docx(doc, json_values, template)
         doc.save(output_filename)

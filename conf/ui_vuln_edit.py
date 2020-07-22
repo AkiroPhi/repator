@@ -132,28 +132,28 @@ def vuln_editing(doc_id, vuln, lang=""):
         "signal": ["creationImage", "deletionImage", "modificationImage"],
         "signalFct": ["add_image", "remove_image", "modify_image"]
     }
-    lst["script"+lang+"-" + str(doc_id)] = {
+    lst["script-" + str(doc_id)] = {
         "class": QLineEdit,
         "label": "Status script",
         "signal": "textChanged",
         "signalFct": ["update_vuln", "update_button"],
         "help": "display_help_var",
         "helpLogo": "img/help.png",
-        "arg": vuln["script"+lang] if vuln["script"+lang] else vuln["script"]
+        "arg": vuln["script"]
     }
-    lst["regexVuln"+lang+"-" + str(doc_id)] = {
+    lst["regexVuln-" + str(doc_id)] = {
         "class": QLineEdit,
         "label": "Regex Vulnerable",
         "signal": "textChanged",
         "signalFct": "update_vuln",
-        "arg": vuln["regexVuln"+lang] if vuln["regexVuln"+lang] else vuln["regexVuln"]
+        "arg": vuln["regexVuln"]
     }
-    lst["regexNotVuln"+lang+"-" + str(doc_id)] = {
+    lst["regexNotVuln-" + str(doc_id)] = {
         "class": QLineEdit,
         "label": "Regex Not Vulnerable",
         "signal": "textChanged",
         "signalFct": "update_vuln",
-        "arg": vuln["regexNotVuln"+lang] if vuln["regexNotVuln"+lang] else vuln["regexNotVuln"]
+        "arg": vuln["regexNotVuln"]
     }
     lst["CVSS"] = {"class": QLabel,
                    "col": 0}

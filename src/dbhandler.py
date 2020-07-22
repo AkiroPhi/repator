@@ -9,7 +9,8 @@ from tinydb import TinyDB, Query
 
 from conf.db import (DB_AUDITORS, DB_AUDITORS_DEFAULT, DB_CLIENTS,
                      DB_CLIENTS_DEFAULT, DB_VULNS, DB_VULNS_DEFAULT,
-                     DB_VULNS_GIT)
+                     DB_VULNS_GIT, DB_VULNS_DIFFERENT_LANG)
+from conf.report import LANGUAGES
 
 
 class DBHandler:
@@ -67,6 +68,15 @@ class DBHandler:
         """Adds a new record to the database."""
         if dictionary is None:
             dictionary = collections.OrderedDict(self.search_by_id(1))
+            first_lang = True
+
+            # Adds the keys which are different according to the languages
+            for lang in LANGUAGES:
+                if first_lang:
+                    first_lang = False
+                else:
+                    for elem in DB_VULNS_DIFFERENT_LANG:
+                        dictionary[elem+lang] = dictionary[elem]
         return self.database.insert(dictionary)
 
     def insert_multiple(self, dictionary):

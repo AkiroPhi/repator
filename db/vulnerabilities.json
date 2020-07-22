@@ -50,10 +50,7 @@
       "observNeg": "Some user supplied inputs are inefficiently filtered and can be used to execute some SQL code.",
       "observNegHistory": [
         "New Observation",
-        "Some user supplied inputs are inefficiently filtered and can be used to execute some SQL code.",
-        "Some user supplied inputs are inefficiently filtered and can be used to execute some SQL code. ",
-        "Some user supplied inputs are inefficiently filtered and can be used to execute some SQL code.e",
-        "Some user supplied inputs are inefficiently filtered and can be used to execute some SQL code.\n[[U]]salut[[/U]]"
+        "Some user supplied inputs are inefficiently filtered and can be used to execute some SQL code."
       ],
       "observPos": "User inputs are well filtered before being included into SQL requests.",
       "observPosHistory": [
@@ -70,11 +67,32 @@
       "risk": "SQL injection may be used by malicious peoples to read all the content of your database.\nDepending on the database configuration and on the injected SQL query, SQL injections are often allowing database writing.\nIn some case SQL injection may also lead to server side code execution.",
       "riskHistory": [
         "New Risk",
-        "SQL injection may be used by malicious peoples to read all the content of your database.\nDepending on the database configuration and on the injected SQL query, SQL injections are often allowing database writing.\nIn some case SQL injection may also lead to server side code execution.",
         "SQL injection may be used by malicious peoples to read all the content of your database.\nDepending on the database configuration and on the injected SQL query, SQL injections are often allowing database writing.\nIn some case SQL injection may also lead to server side code execution."
       ],
       "script": "ls -l",
-      "sub_category": "User input validation"
+      "sub_category": "User input validation",
+      "observNegFR": "Certaines entr\u00e9es utilisateur sont filtr\u00e9es de mani\u00e8re inefficace et peuvent \u00eatre utilis\u00e9es pour ex\u00e9cuter du code SQL.",
+      "riskFR": "L'injection SQL peut \u00eatre utilis\u00e9e par des personnes malveillantes pour lire tout le contenu de votre base de donn\u00e9es.\nSelon la configuration de la base de donn\u00e9es et la requ\u00eate SQL inject\u00e9e, les injections SQL permettent souvent l'\u00e9criture de la base de donn\u00e9es.\nDans certains cas, l'injection SQL peut \u00e9galement conduire \u00e0 l'ex\u00e9cution de code c\u00f4t\u00e9 serveur.",
+      "labelPosFR": "Aucune entr\u00e9e d'utilisateur n'est vuln\u00e9rable aux injections SQL.",
+      "observPosFR": "Les entr\u00e9es utilisateur sont bien filtr\u00e9es avant d'\u00eatre incluses dans les requ\u00eates SQL.",
+      "recoFR": "Ne faites jamais confiance aux entr\u00e9es fournies par l'utilisateur, appliquez un filtrage avant de les utiliser dans des requ\u00eates SQL.\nUtilisez des instructions pr\u00e9par\u00e9es SQL au lieu de requ\u00eates r\u00e9guli\u00e8res.",
+      "observNegHistoryFR": [
+        "New Observation",
+        "Certaines entr\u00e9es utilisateur sont filtr\u00e9es de mani\u00e8re inefficace et peuvent \u00eatre utilis\u00e9es pour ex\u00e9cuter du code SQL."
+      ],
+      "observPosHistoryFR": [
+        "New Observation",
+        "Les entr\u00e9es utilisateur sont bien filtr\u00e9es avant d'\u00eatre incluses dans les requ\u00eates SQL."
+      ],
+      "riskHistoryFR": [
+        "New Risk",
+        "L'injection SQL peut \u00eatre utilis\u00e9e par des personnes malveillantes pour lire tout le contenu de votre base de donn\u00e9es.\nSelon la configuration de la base de donn\u00e9es et la requ\u00eate SQL inject\u00e9e, les injections SQL permettent souvent l'\u00e9criture de la base de donn\u00e9es.\nDans certains cas, l'injection SQL peut \u00e9galement conduire \u00e0 l'ex\u00e9cution de code c\u00f4t\u00e9 serveur."
+      ],
+      "recoHistoryFR": [
+        "New Recommandation",
+        "Ne faites jamais confiance aux entr\u00e9es fournies par l'utilisateur, appliquez un filtrage avant de les utiliser dans des requ\u00eates SQL.\nUtilisez des instructions pr\u00e9par\u00e9es SQL au lieu de requ\u00eates r\u00e9guli\u00e8res."
+      ],
+      "labelNegFR": "Certaines entr\u00e9e d'utilisateur sont vuln\u00e9rable aux injections SQL."
     },
     "3": {
       "A": "High",
@@ -92,8 +110,7 @@
       "observNeg": "Some user supplied inputs are inefficiently filtered and can be used to inject some client-side executable code into web pages.",
       "observNegHistory": [
         "New Observation",
-        "Some user supplied inputs are inefficiently filtered and can be used to inject some client-side executable code into web pages.",
-        "Some user supplied inputs are inefficiently filtered and can be used to inject some client-side executable code into web pages. "
+        "Some user supplied inputs are inefficiently filtered and can be used to inject some client-side executable code into web pages."
       ],
       "observPos": "User supplied inputs are well filtred before being included into web pages.",
       "observPosHistory": [
@@ -113,7 +130,19 @@
         "XSS may be used by malicious peoples to have some client-side code execution.\\nThis code execution can be used for example to steal user's session, to steal user's sensitives data or to perform some actions using his authorizations."
       ],
       "script": "ls -l",
-      "sub_category": "User input validation"
+      "sub_category": "User input validation",
+      "observNegHistoryFR": [
+        "New Observation"
+      ],
+      "observPosHistoryFR": [
+        "New Observation"
+      ],
+      "riskHistoryFR": [
+        "New Risk"
+      ],
+      "recoHistoryFR": [
+        "New Recommandation"
+      ]
     },
     "4": {
       "A": "High",
@@ -130,28 +159,42 @@
       "name": "vuln\u00e9rabilit\u00e9 test",
       "observNeg": "negative observation",
       "observNegHistory": [
-        "",
+        "New Observation",
         "negative observation"
       ],
       "observPos": "positive observation",
       "observPosHistory": [
-        "",
+        "New Observation",
         "positive observation"
       ],
       "reco": "recommandation",
       "recoHistory": [
-        "",
+        "New Recommandation",
         "recommandation"
       ],
       "regexNotVuln": ".*(salut.).*",
       "regexVuln": ".*(README.md).*",
       "risk": "risk",
       "riskHistory": [
-        "",
+        "New Risk",
         "risk"
       ],
       "script": "ls -l",
-      "sub_category": "Sous-Cat\u00e9gorie test"
+      "sub_category": "Sous-Cat\u00e9gorie test",
+      "observNegFR": "negative observation",
+      "observNegHistoryFR": [
+        "New Observation",
+        "negative observation"
+      ],
+      "observPosHistoryFR": [
+        "New Observation"
+      ],
+      "riskHistoryFR": [
+        "New Risk"
+      ],
+      "recoHistoryFR": [
+        "New Recommandation"
+      ]
     }
   }
 }

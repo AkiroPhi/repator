@@ -102,6 +102,7 @@ class LineChooser(QWidget):
         self.button_add = QPushButton("Select a file")
         self.button_del = QPushButton("Delete file")
         self.history = History(parent, local=True)
+        self.history.removeItemSignal.connect(self.remove_history_index)
         self.label_file = QLabel("")
         self.label_text = RichTextEdit(args="", parent=self)
 
@@ -140,6 +141,12 @@ class LineChooser(QWidget):
         self.label_text.text_changed.connect(lambda:
                                              self.parent.emit_modification(self.index, self.file,
                                                                            self.label_text.to_plain_text()))
+
+    def remove_history_index(self, row):
+        del self.parent.history[row]
+        for line in self.parent.lst.values():
+            if line != self:
+                line.history.removeItem(row, emit=False)
 
     def select_file(self):
         file_name, _ = self.dialog.getOpenFileName(filter=self.extension)
