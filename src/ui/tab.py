@@ -642,6 +642,7 @@ class Tab(QScrollArea):
                 if value:
                     if children in self.buttons_enable:
                         children.setEnabled(self.buttons_enable[children])
+                        children.setStyleSheet("color: None")
                 else:
                     self.buttons_enable[children] = children.isEnabled()
                     if children.isEnabled() and children.text() == "Run test":
