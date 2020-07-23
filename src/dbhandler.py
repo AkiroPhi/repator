@@ -70,13 +70,14 @@ class DBHandler:
             dictionary = collections.OrderedDict(self.search_by_id(1))
             first_lang = True
 
-            # Adds the keys which are different according to the languages
-            for lang in LANGUAGES:
-                if first_lang:
-                    first_lang = False
-                else:
-                    for elem in DB_VULNS_DIFFERENT_LANG:
-                        dictionary[elem+lang] = dictionary[elem]
+            if self.path == DB_VULNS:
+                # Adds the keys which are different according to the languages
+                for lang in LANGUAGES:
+                    if first_lang:
+                        first_lang = False
+                    else:
+                        for elem in DB_VULNS_DIFFERENT_LANG:
+                            dictionary[elem+lang] = dictionary[elem]
         return self.database.insert(dictionary)
 
     def insert_multiple(self, dictionary):
