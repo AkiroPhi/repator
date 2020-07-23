@@ -641,10 +641,10 @@ class Tab(QScrollArea):
             if isinstance(children, QPushButton):
                 if value:
                     if children in self.buttons_enable:
-                        children.setEnabled(self.buttons_enable[children])
-                        children.setStyleSheet("color: None")
+                        children.setEnabled(self.buttons_enable[children][0])
+                        children.setStyleSheet(self.buttons_enable[children][1])
                 else:
-                    self.buttons_enable[children] = children.isEnabled()
+                    self.buttons_enable[children] = (children.isEnabled(), children.styleSheet())
                     if children.isEnabled() and children.text() == "Run test":
                         children.setStyleSheet("color: Black")
                     children.setEnabled(False)
@@ -654,8 +654,10 @@ class Tab(QScrollArea):
             elif isinstance(children, QLineEdit):
                 children.setEnabled(value)
                 if value:
-                    children.setStyleSheet("color: None; background-color: None")
+                    if children in self.buttons_enable:
+                        children.setStyleSheet(self.buttons_enable[children])
                 else:
+                    self.buttons_enable[children] = children.styleSheet()
                     children.setStyleSheet("color: Black; background-color: White")
 
             # Otherwise, we go down in the hierarchy
