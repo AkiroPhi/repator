@@ -793,39 +793,39 @@ class Tab(QScrollArea):
         # To avoid this and a possible removal of vulnerabilities, we recover the error and do nothing
         try:
             vuln = self.database.search_by_id(int(doc_id))
+            if "vuln" in locals() and vuln is not None and "script" in vuln and len(vuln["script"]) > 0:
+                # Gets the Window tab
+                if parent is None:
+                    tab_window = self.get_parent(self.sender())
+                else:
+                    tab_window = self.get_parent(parent)
+                if tab_window is None:
+                    return
+
+                fields = tab_window.tabs["Mission"].fields
+                script = vuln["script"]
+
+                # Replace all variables
+                for ident, field in fields.items():
+                    if isinstance(field, QLineEdit) or isinstance(field, QDateEdit):
+                        for var_field in {ident, ident.lower(), ident.upper(), ident.capitalize()}:
+                            script = script.replace("##" + var_field + "##", field.text())
+
+                # Calculate the status and display a popup if necessary
+                result = status_vuln(script, (vuln["regexVuln"], vuln["regexNotVuln"]))
+                if result is not None and result[0] in self.valid_status_vuln \
+                        and "isVuln-" + doc_id in self.fields:
+                    self.fields["isVuln-" +
+                                doc_id].setCurrentText(result[0])
+                elif dispay_popup_error and (result is None or not result[0] in self.valid_status_vuln):
+                    self.display_error_test(result)
+            if parent is None:
+                tab_Vulns = self.get_parent(self.sender()).tabs["Vulns"]
+            else:
+                tab_Vulns = self.get_parent(parent).tabs["Vulns"]
+            tab_Vulns.updateField.emit(tab_Vulns, True)
         except:
             return
-        if "vuln" in locals() and "script" in vuln and len(vuln["script"]) > 0:
-            # Gets the Window tab
-            if parent is None:
-                tab_window = self.get_parent(self.sender())
-            else:
-                tab_window = self.get_parent(parent)
-            if tab_window is None:
-                return
-
-            fields = tab_window.tabs["Mission"].fields
-            script = vuln["script"]
-
-            # Replace all variables
-            for ident, field in fields.items():
-                if isinstance(field, QLineEdit) or isinstance(field, QDateEdit):
-                    for var_field in {ident, ident.lower(), ident.upper(), ident.capitalize()}:
-                        script = script.replace("##" + var_field + "##", field.text())
-
-            # Calculate the status and display a popup if necessary
-            result = status_vuln(script, (vuln["regexVuln"], vuln["regexNotVuln"]))
-            if result is not None and result[0] in self.valid_status_vuln \
-                    and "isVuln-" + doc_id in self.fields:
-                self.fields["isVuln-" +
-                            doc_id].setCurrentText(result[0])
-            elif dispay_popup_error and (result is None or not result[0] in self.valid_status_vuln):
-                self.display_error_test(result)
-        if parent is None:
-            tab_Vulns = self.get_parent(self.sender()).tabs["Vulns"]
-        else:
-            tab_Vulns = self.get_parent(parent).tabs["Vulns"]
-        tab_Vulns.updateField.emit(tab_Vulns, True)
 
     def display_help_var(self):
         """Displays a popup with all availables variables"""
