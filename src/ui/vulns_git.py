@@ -665,10 +665,19 @@ class VulnsGit(QWidget):
         self.grid.itemAt(0).widget().currentChanged.connect(
             self.change_bottom_buttons)
 
-    def refresh_repator(self, repator, index=None):
+    def refresh_repator(self, repator, index=[]):
         """Rebuilds the vulns widget repator with the tabs currently open (without index)"""
         vulns = repator.layout().itemAt(0).widget().widget(3).fields["vulns"]
         tabs = []
+        saved_status = {}
+
+        #save the status of vulns
+        for name, obj_class in vulns.tabs["All"].fields.items():
+            name = name.split("-")
+            if len(name) > 1 and name[0] == "isVuln":
+                saved_status[name[1]] = obj_class.currentText()
+
+        # save the open tabs
         for i in range(vulns.tabw.tabBar().count() - 1, 0, -1):
             tabs.append(vulns.tabw.tabBar().tabText(i))
             self.tabw.tabBar().removeTab(i)
@@ -677,6 +686,7 @@ class VulnsGit(QWidget):
                 if i in tabs:
                     tabs.remove(i)
 
+        # update the vulns widget
         del vulns.database
         vulns.tabw.deleteLater()
         vulns.lst = copy(VULNS)
@@ -685,9 +695,15 @@ class VulnsGit(QWidget):
         vulns.init_tab()
         vulns.grid.replaceWidget(vulns.layout().itemAt(0).widget(), vulns.tabw)
 
+        # open the tabs previously saved
         for doc_id in reversed(tabs):
             vulns.tabs["All"].fields["edit-" + doc_id].animateClick()
         vulns.tabw.setCurrentWidget(vulns.tabs["All"])
+
+        # set the saved status
+        for number, status in saved_status.items():
+            if "isVuln-"+number in vulns.tabs["All"].fields:
+                vulns.tabs["All"].fields["isVuln-"+number].setCurrentText(status)
 
     def toggle_hide(self):
         """Toggles self.hide."""
