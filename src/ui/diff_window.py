@@ -8,7 +8,7 @@ from copy import copy
 from conf.ui_auditors_initial import AUDITORS_INITIAL, add_auditor_initial
 from conf.ui_vulns_initial import VULNS_INITIAL, add_vuln_initial
 from src.ui.tab import Tab
-from src.ui.vulns_git import ObjectsGit
+from src.ui.objects_git import ObjectsGit
 from src.dbhandler import DBHandler
 from src.git_interactions import Git
 

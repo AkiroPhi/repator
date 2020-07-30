@@ -14,7 +14,7 @@ from conf.report import GIT
 from src.dbhandler import DBHandler
 from src.reportgenerator import json, Generator
 from src.ui.tab import Tab
-from src.ui.vulns_git import ObjectsGit
+from src.ui.objects_git import ObjectsGit
 from src.git_interactions import Git
 from src.ui.diff_window import DiffWindows
 
