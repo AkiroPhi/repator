@@ -4,14 +4,21 @@
 
 import collections
 
-DB_AUDITORS = "db/auditors.json"
-DB_CLIENTS = "db/clients.json"
-DB_VULNS = "db/vulnerabilities.json"
-DB_VULNS_GIT = "db/vulnerabilitiesGit.json"
-DB_VULNS_GIT_DIR = ".tmpGit/"
-DB_VULNS_GIT_FILE = "vulnerabilities.json"
-DB_VULNS_GIT_UPDATED = DB_VULNS_GIT_DIR + DB_VULNS_GIT_FILE
+DB_LOCAL_FILES = {}
+DB_LOCAL_FILES["vulns"] = "db/vulnerabilities.json"
+DB_LOCAL_FILES["auditors"]= "db/auditors.json"
+DB_LOCAL_FILES["clients"] = "db/clients.json"
 
+DB_GIT_LOCAL_FILES = {}
+DB_GIT_LOCAL_FILES["vulns"] = "db/vulnerabilitiesGit.json"
+DB_GIT_LOCAL_FILES["auditors"] = "db/auditorsGit.json"
+DB_GIT_LOCAL_FILES["clients"] = "db/clientsGit.json"
+
+DB_GIT_DIR = ".tmpGit/"
+DB_GIT_REMOTE_FILES ={}
+DB_GIT_REMOTE_FILES["vulns"] = "vulnerabilities.json"
+DB_GIT_REMOTE_FILES["auditors"] = "auditors.json"
+DB_GIT_REMOTE_FILES["clients"] ="clients.json"
 
 DB_AUDITORS_DEFAULT = collections.OrderedDict()
 DB_AUDITORS_DEFAULT["full_name"] = ""

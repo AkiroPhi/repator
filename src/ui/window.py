@@ -9,13 +9,14 @@ from PyQt5.QtWidgets import QWidget, QTabWidget, QPushButton, QGridLayout, QFile
 from PyQt5.QtCore import QCoreApplication, Qt
 
 from conf.ui_vulns_initial import VULNS_INITIAL, add_vuln_initial
+from conf.ui_auditors_initial import AUDITORS_INITIAL, add_auditor_initial
 from conf.report import GIT
 from src.dbhandler import DBHandler
 from src.reportgenerator import json, Generator
 from src.ui.tab import Tab
-from src.ui.vulns_git import VulnsGit
+from src.ui.vulns_git import ObjectsGit
 from src.git_interactions import Git
-
+from src.ui.diff_window import DiffWindows
 
 class Window(QWidget):
     """Repator window creation class."""
@@ -94,7 +95,6 @@ class Window(QWidget):
         values = {}
         for tabname, tab in self.tabs.items():
             values[tabname] = tab.save(database=True)
-
         project_filename = QFileDialog.getSaveFileName(
             self, "Save Repator Project", "projects/test.rep",
             "Repator Project files [*.rep] (*.rep);;All files [*] (*)")[0]
@@ -140,13 +140,13 @@ class Window(QWidget):
         """Opens the window "Diffs"."""
         # NB: the windows "Diffs" will close when editing in "Repator" if
         # nothing has been opened in it.
-        tab_lst = copy(VULNS_INITIAL), DBHandler.vulns(
-        ), DBHandler.vulns_git(), add_vuln_initial
         for window in self.app.topLevelWidgets():
             if window.windowTitle() == "Diffs" and window.isVisible():
                 self.app.setActiveWindow(window)
+                window.tabw.setCurrentIndex(self.tabs["Mission"]._parent.currentIndex() % 3)
                 return
-        window = VulnsGit("Diffs", tab_lst)
+        window = DiffWindows()
+        window.tabw.setCurrentIndex(self.tabs["Mission"]._parent.currentIndex() % 3)
         window.showMaximized()
 
     def set_modified(self, tab, value):

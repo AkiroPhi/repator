@@ -115,7 +115,6 @@ class GitButton(QPushButton):
         for window in app.topLevelWidgets():
             if window.windowTitle() == "Repator":
                 repator = window
-        print(repator.tabs["Vulns"].fields["vulns"].tabs["All"])
         return []
 
     def update_check_box(self):

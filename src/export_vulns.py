@@ -6,7 +6,7 @@ from json import JSONDecoder,dumps
 from collections import OrderedDict
 from csv import DictWriter
 from conf.report import LANGUAGES
-from conf.db import DB_VULNS,DB_VULNS_DEFAULT
+from conf.db import DB_LOCAL_FILES, DB_VULNS_DEFAULT
 
 MONOLANGFIELDS = ["AV", "AC", "PR", "UI", "S", "C", "I", "A"]
 
@@ -35,7 +35,7 @@ def main(args):
                 field + lang for field in field_names_lang]
 
     output_file = args[1]
-    with open(DB_VULNS, 'r') as input_file:
+    with open(DB_LOCAL_FILES["vulns"], 'r') as input_file:
         input_file = input_file.read()
         dictionary = JSONDecoder(object_pairs_hook=OrderedDict).decode(
             input_file)["_default"]

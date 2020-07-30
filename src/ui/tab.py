@@ -501,6 +501,11 @@ class Tab(QScrollArea):
         self._parent.see_changes_vuln(
             self.sender().accessibleName().split("-")[1])
 
+    def see_changes_auditor(self):
+        """Call the "Objects Git" function see_changes_auditor. (weok also for clients)"""
+        self._parent.see_changes_auditor(
+            self.sender().accessibleName().split("-")[1])
+
     def del_vuln(self):
         """Shows a vuln as deleted on first pressure on the button "delete" and removes the vuln
         on the second pressure.

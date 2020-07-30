@@ -14,25 +14,32 @@ from PyQt5.QtWidgets import (QWidget, QTabWidget, QGridLayout, QTabBar,
 from conf.ui_vuln_changes import vuln_changes
 from conf.ui_vulns_initial import VULNS_INITIAL
 from conf.ui_vulns import VULNS
-from conf.report import LANGUAGES, GREEN, RED, BLUE, DEFAULT, COLORS, HEADERS, CVSS, HISTORIES
-from conf.db import DB_VULNS_GIT, DB_VULNS, DB_VULNS_GIT_UPDATED
+from conf.ui_auditor_changes import auditor_changes
+from conf.ui_auditors_initial import AUDITORS_INITIAL
+from conf.ui_auditors import PEOPLE
+from conf.report import LANGUAGES, GREEN, RED, BLUE, DEFAULT, COLORS, HEADERS, CVSS, HISTORIES, HEADERS_PEOPLE
+from conf.db import DB_GIT_LOCAL_FILES, DB_LOCAL_FILES, DB_GIT_DIR, DB_GIT_REMOTE_FILES
 from src.cvss import cvssv3, risk_level
 from src.git_interactions import Git
 from src.ui.checks_window import GitButton
 from src.ui.tab import Tab
+from conf.ui_auditors import PEOPLE, add_people
+from src.dbhandler import DBHandler
 
 
 from src.dbhandler import DBHandler
 
 
-class VulnsGit(QWidget):
+class ObjectsGit(QWidget):
     """Class for the features of the "Diffs" window."""
 
-    def __init__(self, title, args):
-        super().__init__()
+    def __init__(self, obj, args, parent):
+        super().__init__(parent)
 
         self.app = QCoreApplication.instance()
         self.git = self.app.findChild(Git)
+        self.obj = obj
+        self._parent = parent # keep the window open
 
         self.lst = args[0]
         self.db_initial = args[1]
@@ -40,11 +47,9 @@ class VulnsGit(QWidget):
         self.add_fct = args[3]
         self.hide = False
         self.buttons = dict()
-        self.hidden_vulns = self.git.hidden_changes_vulns # using reference
+        self.hidden_objects = self.git.hidden_changes_objects[self.obj] # using reference
         self.json_db_git = dict()
         self.json_db = dict()
-
-        self.setWindowTitle(title)
 
         self.init_tab()
         self.grid = QGridLayout()
@@ -66,7 +71,6 @@ class VulnsGit(QWidget):
 
         tab_lst = OrderedDict()
         tab_lst["All"] = self.lst
-
         self.init_db_local_git()
         self.update_diffs()
 
@@ -78,12 +82,10 @@ class VulnsGit(QWidget):
         self.tabw.tabBar().setTabButton(0, QTabBar.LeftSide, None)
 
         self.update_status()
-        self.tabs["All"].fields["categorySort"].init_sorts()
-        self.tabw.widget(0).widget.layout().itemAt(
-            3).widget().clicked.connect(self.git_refresh)
+        if self.obj == "vulns": self.tabs["All"].fields["categorySort"].init_sorts()
 
     def add_tab(self, label, lst, database, add_fct=None):
-        """Method to add a tab to the VulnsGit tab widget."""
+        """Method to add a tab to the ObjectsGit tab widget."""
         if label in self.tabs:
             for i in range(self.tabw.count()):
                 if self.tabw.tabText(i) == label:
@@ -92,7 +94,7 @@ class VulnsGit(QWidget):
         else:
             if label == "All":
                 self.add_changed_entries(lst)
-            if label == "All" or len(LANGUAGES) == 1:
+            if label == "All" or len(LANGUAGES) == 1 or self.obj != "vulns":
                 self.tabs[label] = Tab(self, lst, self.add_fct)
                 self.tabw.addTab(self.tabs[label], label)
                 self.tabw.setCurrentWidget(self.tabs[label])
@@ -105,13 +107,13 @@ class VulnsGit(QWidget):
                 self.tabs[label] = tabs
                 self.tabw.addTab(tabw, label)
                 self.tabw.setCurrentWidget(tabw)
-            if label != "All":
+            if label != "All" and self.obj == "vulns":
                 if len(LANGUAGES) == 1:
-                    VulnsGit.init_history_color(self.tabs[label], label)
+                    ObjectsGit.init_history_color(self.tabs[label], label)
                     self.update_cvss_metrics(label, self.tabs[label])
                 else:
                     for lang in self.tabs[label]:
-                        VulnsGit.init_history_color(lang,
+                        ObjectsGit.init_history_color(lang,
                             self.tabs[label][lang], label)
                         self.update_cvss_metrics(label, self.tabs[label][lang])
 
@@ -121,10 +123,10 @@ class VulnsGit(QWidget):
         self.buttons["hideBtn"] = GitButton("Hide changes", "hide", self)
         self.buttons["patchBtn"] = GitButton("Patch", "patch", self)
 
-        self.buttons["hideOneBtn"] = QPushButton("Hide changes for this vuln")
-        self.buttons["patchOneBtn"] = QPushButton("Patch this vuln")
-        self.buttons["duplicateOneButton"] = QPushButton("Duplicate this vuln")
-        self.buttons["uploadOneBtn"] = QPushButton("Upload this vuln")
+        self.buttons["hideOneBtn"] = QPushButton("Hide changes for this " + self.obj[:-1]) # substract the last "s"
+        self.buttons["patchOneBtn"] = QPushButton("Patch this " + self.obj[:-1])
+        self.buttons["duplicateOneButton"] = QPushButton("Duplicate this " + self.obj[:-1])
+        self.buttons["uploadOneBtn"] = QPushButton("Upload this " + self.obj[:-1])
 
         # self.buttons["uploadBtn"].clicked.connect(self.upload_changes)
         # self.buttons["hideBtn"].clicked.connect(self.hide_changes)
@@ -188,7 +190,7 @@ class VulnsGit(QWidget):
         jsondb = "{\"_default\":" + \
             json.dumps({(new_ident if x == ident else int(x)): self.json_db[x]
                         for x in self.json_db.keys()}, sort_keys=True) + "}"
-        with open(DB_VULNS, 'w') as output:
+        with open(DB_LOCAL_FILES[self.obj], 'w') as output:
             output.write(jsondb)
         for window in self.app.topLevelWidgets():
             if window.windowTitle() == "Repator":
@@ -204,7 +206,7 @@ class VulnsGit(QWidget):
 
         # first pull the repo -->
         # if changed --> warning + window
-        refresh_button = self.layout().itemAt(0).widget().widget(0).widget.layout().itemAt(3).widget()
+        refresh_button = self.grid.itemAt(1).widget()
         if self.git.git_update() or refresh_button.styleSheet() == "QPushButton { background-color : red }":
             self.refresh_tab_widget()
             WarningWindow = QMessageBox()
@@ -221,13 +223,13 @@ class VulnsGit(QWidget):
             jsondb = "{\"_default\":" + \
                 json.dumps({int(x): self.json_db_git[x]
                             for x in self.json_db_git.keys()}, sort_keys=True) + "}"
-            with open(DB_VULNS_GIT, 'w') as output:
+            with open(DB_GIT_LOCAL_FILES[self.obj], 'w') as output:
                 output.write(jsondb)
-            with open(DB_VULNS_GIT_UPDATED, 'w') as output:
+            with open(DB_GIT_DIR + DB_GIT_REMOTE_FILES[self.obj], 'w') as output:
                 output.write(jsondb)
 
             # and commit and push --> self.git.git_upload()
-            self.git.git_upload()
+            self.git.git_upload(DB_GIT_REMOTE_FILES[self.obj])
 
         # To also update repator window
         for window in self.app.topLevelWidgets():
@@ -243,7 +245,7 @@ class VulnsGit(QWidget):
             if window.windowTitle() == "Repator":
                 repator = window
 
-        refresh_button = self.layout().itemAt(0).widget().widget(0).widget.layout().itemAt(3).widget()
+        refresh_button = self.grid.itemAt(1).widget()
         git_label = repator.layout().itemAt(5).widget()
         if self.git.git_update() or refresh_button.styleSheet() == "QPushButton { background-color : red }":
             self.refresh_tab_widget()
@@ -266,12 +268,12 @@ class VulnsGit(QWidget):
         jsondb = "{\"_default\":" + \
             json.dumps({int(x): self.json_db_git[x]
                         for x in self.json_db_git.keys()}, sort_keys=True) + "}"
-        with open(DB_VULNS_GIT, 'w') as output:
+        with open(DB_GIT_LOCAL_FILES[self.obj], 'w') as output:
             output.write(jsondb)
-        with open(DB_VULNS_GIT_UPDATED, 'w') as output:
+        with open(DB_GIT_DIR + DB_GIT_REMOTE_FILES[self.obj], 'w') as output:
             output.write(jsondb)
 
-        self.git.git_upload()
+        self.git.git_upload(DB_GIT_REMOTE_FILES[self.obj])
 
         # To also update repator window
         self.refresh_repator(repator)
@@ -280,8 +282,8 @@ class VulnsGit(QWidget):
 
     def hide_changes(self, checked):
         """Allows to choose which vulnerabilities are not followed."""
-        self.hidden_vulns.clear()
-        self.hidden_vulns.update(checked)
+        self.hidden_objects.clear()
+        self.hidden_objects.update(checked)
         self.refresh_tab_widget()
 
     def patch_changes(self, checked):
@@ -294,7 +296,7 @@ class VulnsGit(QWidget):
             jsondb = "{\"_default\":" + \
                 json.dumps({int(x): self.json_db[x]
                             for x in self.json_db.keys()}, sort_keys=True) + "}"
-            with open(DB_VULNS, 'w') as output:
+            with open(DB_LOCAL_FILES[self.obj], 'w') as output:
                 output.write(jsondb)
             # To also update repator window
         for window in self.app.topLevelWidgets():
@@ -308,7 +310,7 @@ class VulnsGit(QWidget):
         """Stops following the current vulnerability."""
         index = self.tabw.currentIndex()
         ident = self.tabw.tabText(index)
-        self.hidden_vulns.add(ident)
+        self.hidden_objects.add(ident)
         self.buttons["hideBtn"].checked[ident] = True
         fields = self.tabw.widget(0).fields
         for widget in fields:
@@ -330,23 +332,24 @@ class VulnsGit(QWidget):
         jsondb = "{\"_default\":" + \
             json.dumps({int(x): self.json_db[x]
                         for x in self.json_db.keys()}, sort_keys=True) + "}"
-        with open(DB_VULNS, 'w') as output:
+        with open(DB_LOCAL_FILES[self.obj], 'w') as output:
             output.write(jsondb)
         # To also update repator window
         for window in self.app.topLevelWidgets():
             if window.windowTitle() == "Repator":
                 repator = window
-                vulns = repator.layout().itemAt(
-                    0).widget().widget(3).fields["vulns"]
+                if self.obj == "vulns":
+                    objs = repator.layout().itemAt(0).widget().widget(3).fields["vulns"]
+                    tab = objs.tabw.widget(0)
+                elif self.obj == "clients":
+                    objs = repator.layout().itemAt(0).widget().widget(2)
+                else:
+                    objs = repator.layout().itemAt(0).widget().widget(2)
         # Patches the "All" tab for repator
-        tab = vulns.tabw.widget(0)
         if self.style[ident] == GREEN or self.style[ident] == RED:
             self.refresh_repator(repator, [ident])
         else:
-            for field in ["category", "sub_category", "name"]:
-                tab.fields[field + "-" + ident].setText(
-                    self.json_db[ident][field])
-                self.refresh_repator(repator)
+            self.refresh_repator(repator)
         self.update_diffs()
         self.refresh_tab_widget()
 
@@ -354,7 +357,7 @@ class VulnsGit(QWidget):
         """Adds all entries from self.style to the tab "All"."""
         entry = sorted(self.style.keys(), key=int)
         for ident in entry:
-            if ident not in self.hidden_vulns:
+            if ident not in self.hidden_objects:
                 item = self.db_initial.search_by_id(
                     int(ident)) or self.db_git.search_by_id(int(ident))
                 self.add_fct(lst, ident, item)
@@ -387,27 +390,39 @@ class VulnsGit(QWidget):
                 ).setVerticalSpacing(10)
                 self.tabs[str(doc_id)][tab].widget.layout(
                 ).setHorizontalSpacing(20)
-                VulnsGit.set_global_word_wrap(self.tabs[str(doc_id)][tab])
+                ObjectsGit.set_global_word_wrap(self.tabs[str(doc_id)][tab])
                 self.tabs[str(doc_id)][tab].update_cvss(doc_id)
                 # To update histories only once all the widgets are created
                 for widget in self.tabs[str(doc_id)][tab].fields:
                     if isinstance(self.tabs[str(doc_id)][tab].fields[widget], QComboBox):
                         self.update_history(
                             widget, self.tabs[str(doc_id)][tab], 0)
-                self.setup_style(self.tabs[str(doc_id)][tab], str(
+                self.setup_vuln_style(self.tabs[str(doc_id)][tab], str(
                     doc_id), tab if LANGUAGES.index(tab) != 0 else "")
         else:
             lst = vuln_changes(doc_id, vuln_initial, vuln_git, style)
             self.add_tab(str(doc_id), lst, self.db_initial)
             self.tabs[str(doc_id)].widget.layout().setVerticalSpacing(10)
             self.tabs[str(doc_id)].widget.layout().setHorizontalSpacing(20)
-            VulnsGit.set_global_word_wrap(self.tabs[str(doc_id)])
+            ObjectsGit.set_global_word_wrap(self.tabs[str(doc_id)])
             self.tabs[str(doc_id)].update_cvss(doc_id)
             # To update histories only once all the widgets are created
             for widget in self.tabs[str(doc_id)].fields:
                 if isinstance(self.tabs[str(doc_id)].fields[widget], QComboBox):
                     self.update_history(widget, self.tabs[str(doc_id)], 0)
-            self.setup_style(self.tabs[str(doc_id)], str(doc_id))
+            self.setup_vuln_style(self.tabs[str(doc_id)], str(doc_id))
+
+    def see_changes_auditor(self, doc_id):
+        """Creates the next tab with the details about the vuln."""
+        auditor_initial = self.db_initial.search_by_id(int(doc_id))
+        auditor_git = self.db_git.search_by_id(int(doc_id))
+        style = self.style[doc_id] if doc_id in self.style else dict()
+        lst = auditor_changes(doc_id, auditor_initial, auditor_git, style)
+        self.add_tab(str(doc_id), lst, self.db_initial)
+        self.tabs[str(doc_id)].widget.layout().setVerticalSpacing(10)
+        self.tabs[str(doc_id)].widget.layout().setHorizontalSpacing(20)
+        ObjectsGit.set_global_word_wrap(self.tabs[str(doc_id)])
+        self.setup_people_style(self.tabs[str(doc_id)], str(doc_id))
 
     @staticmethod
     def set_global_word_wrap(tab):
@@ -420,9 +435,9 @@ class VulnsGit(QWidget):
     def init_db_local_git(self):
         """Initializes self.json_db_git and self.json_db."""
         self.json_db = json.loads(
-            open(DB_VULNS, 'r').read())["_default"]
+            open(DB_LOCAL_FILES[self.obj], 'r').read())["_default"]
         self.json_db_git = json.loads(
-            open(DB_VULNS_GIT, 'r').read())["_default"]
+            open(DB_GIT_LOCAL_FILES[self.obj], 'r').read())["_default"]
 
     def update_diffs(self):
         """Diffs between json_db_git and json_db and stores it into self.style."""
@@ -437,35 +452,54 @@ class VulnsGit(QWidget):
                 if self.json_db_git[ident] != self.json_db[ident]:
                     style[ident] = BLUE
         self.style = style
+    #TODO
+    def setup_people_style(self, tab, doc_id):
+        """Sets the style for HEADERS_PEOPLE fields."""
+        style = self.style[doc_id]
+        ObjectsGit.set_style(tab, style, "id-" + doc_id)
+        ObjectsGit.set_style(tab, style, "status")
+        for header in [h + "-" + doc_id for h in HEADERS_PEOPLE]:
+            if style == GREEN or (not tab.fields[header + "-1"].text() and
+                                  tab.fields[header + "-2"].text()):
+                ObjectsGit.set_style(tab, GREEN, header + "-2")
+                ObjectsGit.set_style(tab, GREEN, header)
+            elif style == RED or (not tab.fields[header + "-2"].text() and
+                                  tab.fields[header + "-1"].text()):
+                ObjectsGit.set_style(tab, RED, header + "-1")
+                ObjectsGit.set_style(tab, RED, header)
+            elif tab.fields[header + "-1"].text() != tab.fields[header + "-2"].text():
+                ObjectsGit.set_style(tab, BLUE, header + "-1")
+                ObjectsGit.set_style(tab, BLUE, header + "-2")
+                ObjectsGit.set_style(tab, BLUE, header)
 
-    def setup_style(self, tab, doc_id, lang=""):
+    def setup_vuln_style(self, tab, doc_id, lang=""):
         """Sets the style for CVSS and HEADERS fields."""
         style = self.style[doc_id]
-        VulnsGit.set_style(tab, style, "id-" + doc_id)
-        VulnsGit.set_style(tab, style, "status")
+        ObjectsGit.set_style(tab, style, "id-" + doc_id)
+        ObjectsGit.set_style(tab, style, "status")
         for header in [h + lang + "-" + doc_id for h in HEADERS.union(HISTORIES)]:
             if style == GREEN or (not tab.fields[header + "-1"].text() and
                                   tab.fields[header + "-2"].text()):
-                VulnsGit.set_style(tab, GREEN, header + "-2")
-                VulnsGit.set_style(tab, GREEN, header)
+                ObjectsGit.set_style(tab, GREEN, header + "-2")
+                ObjectsGit.set_style(tab, GREEN, header)
             elif style == RED or (not tab.fields[header + "-2"].text() and
                                   tab.fields[header + "-1"].text()):
-                VulnsGit.set_style(tab, RED, header + "-1")
-                VulnsGit.set_style(tab, RED, header)
+                ObjectsGit.set_style(tab, RED, header + "-1")
+                ObjectsGit.set_style(tab, RED, header)
             elif tab.fields[header + "-1"].text() != tab.fields[header + "-2"].text():
-                VulnsGit.set_style(tab, BLUE, header + "-1")
-                VulnsGit.set_style(tab, BLUE, header + "-2")
-                VulnsGit.set_style(tab, BLUE, header)
+                ObjectsGit.set_style(tab, BLUE, header + "-1")
+                ObjectsGit.set_style(tab, BLUE, header + "-2")
+                ObjectsGit.set_style(tab, BLUE, header)
         for header in [c + "-" + doc_id for c in CVSS]:
             if style == GREEN or (not tab.fields[header + "-1"].text() and
                                   tab.fields[header + "-2"].text()):
-                VulnsGit.set_style(tab, GREEN, header + "-2")
+                ObjectsGit.set_style(tab, GREEN, header + "-2")
             elif style == RED or (not tab.fields[header + "-2"].text() and
                                   tab.fields[header + "-1"].text()):
-                VulnsGit.set_style(tab, RED, header + "-1")
+                ObjectsGit.set_style(tab, RED, header + "-1")
             elif tab.fields[header + "-1"].text() != tab.fields[header + "-2"].text():
-                VulnsGit.set_style(tab, BLUE, header + "-1")
-                VulnsGit.set_style(tab, BLUE, header + "-2")
+                ObjectsGit.set_style(tab, BLUE, header + "-1")
+                ObjectsGit.set_style(tab, BLUE, header + "-2")
 
     @staticmethod
     def set_style(tab, color, label):
@@ -493,20 +527,20 @@ class VulnsGit(QWidget):
                         n1 - i, QColor(BLUE), Qt.ForegroundRole)
                     fields[2].setItemData(
                         n2 - i, QColor(BLUE), Qt.ForegroundRole)
-                    VulnsGit.set_style(tab, BLUE, field_names[0])
+                    ObjectsGit.set_style(tab, BLUE, field_names[0])
             if diff > 0:
                 for i in range(1, diff+1): # the first text is always the same (New /something/)
                     fields[1].setItemData(i, QColor(RED), Qt.ForegroundRole)
-                    VulnsGit.set_style(tab, BLUE, field_names[0])
+                    ObjectsGit.set_style(tab, BLUE, field_names[0])
             elif diff < 0:
                 for i in range(1, 1-diff): # the first text is always the same (New /something/)
                     fields[2].setItemData(i, QColor(GREEN), Qt.ForegroundRole)
-                    VulnsGit.set_style(tab, BLUE, field_names[0])
+                    ObjectsGit.set_style(tab, BLUE, field_names[0])
             if not min_count and diff > 0:
-                VulnsGit.set_style(tab, RED, field_names[0])
+                ObjectsGit.set_style(tab, RED, field_names[0])
                 fields[1].setItemData(0, QColor(RED), Qt.ForegroundRole)
             if not min_count and diff < 0:
-                VulnsGit.set_style(tab, GREEN, field_names[0])
+                ObjectsGit.set_style(tab, GREEN, field_names[0])
                 fields[2].setItemData(0, QColor(GREEN), Qt.ForegroundRole)
 
     def update_history(self, field_name, tab, index):
@@ -540,7 +574,7 @@ class VulnsGit(QWidget):
                     index, Qt.ForegroundRole).name()
             except AttributeError:
                 color = DEFAULT
-            VulnsGit.set_style(tab, color, field_label_name)
+            ObjectsGit.set_style(tab, color, field_label_name)
             tab.fields[field_label_name].setText(data)
 
     def update_cvss_metrics(self, doc_id, tab):
@@ -640,7 +674,7 @@ class VulnsGit(QWidget):
         entry = sorted(self.style.keys())
         for ident in entry:
             fields = self.tabs["All"].fields
-            if ident not in self.hidden_vulns:
+            if ident not in self.hidden_objects:
                 color = self.style[ident]
                 if color == BLUE:
                     fields["diff-" + str(ident)].edited()
@@ -655,55 +689,86 @@ class VulnsGit(QWidget):
         for i in range(self.tabw.tabBar().count() - 1, 0, -1):
             tabs.append(self.tabw.tabBar().tabText(i))
             self.tabw.tabBar().removeTab(i)
-        self.lst = copy(VULNS_INITIAL)
+
+        if self.obj == "vulns":
+            self.lst = copy(VULNS_INITIAL)
+        elif self.obj == "auditors" or self.obj == "clients":
+            self.lst = copy(AUDITORS_INITIAL)
+        self.tabw.deleteLater()
         self.init_tab()
         self.grid.replaceWidget(self.layout().itemAt(0).widget(), self.tabw)
+
         for doc_id in reversed(tabs):
             if doc_id in self.style:
-                self.see_changes_vuln(doc_id)
+                if self.obj == "vulns":
+                    self.see_changes_vuln(doc_id)
+                elif self.obj == "auditors" or self.obj == "client":
+                    self.see_changes_auditor(doc_id)
+
         self.tabw.setCurrentWidget(self.tabs["All"])
         self.grid.itemAt(0).widget().currentChanged.connect(
             self.change_bottom_buttons)
 
     def refresh_repator(self, repator, index=[]):
-        """Rebuilds the vulns widget repator with the tabs currently open (without index)"""
-        vulns = repator.layout().itemAt(0).widget().widget(3).fields["vulns"]
-        tabs = []
-        saved_status = {}
+        """Rebuilds the objs widget repator with the tabs currently open (without index)"""
+        if self.obj == "vulns":
+            objs = repator.layout().itemAt(0).widget().widget(3).fields["vulns"]
+        elif self.obj == "auditors":
+            objs = repator.layout().itemAt(0).widget().widget(1)
+        elif self.obj == "clients":
+            objs = repator.layout().itemAt(0).widget().widget(2)
+        else: return
 
-        #save the status of vulns
-        for name, obj_class in vulns.tabs["All"].fields.items():
-            name = name.split("-")
-            if len(name) > 1 and name[0] == "isVuln":
-                saved_status[name[1]] = obj_class.currentText()
+        # save the status
+        if self.obj == "vulns":
+            saved_status = {}
+            for name, obj_class in objs.tabs["All"].fields.items():
+                name = name.split("-")
+                if len(name) > 1 and name[0] == "isVuln" :
+                    saved_status[name[1]] = obj_class.currentText()
+            tabs = []
 
-        # save the open tabs
-        for i in range(vulns.tabw.tabBar().count() - 1, 0, -1):
-            tabs.append(vulns.tabw.tabBar().tabText(i))
-            self.tabw.tabBar().removeTab(i)
-        if index:
-            for i in index:
-                if i in tabs:
-                    tabs.remove(i)
+            #save the current opened tabs (only vulns, without index)
+            for i in range(objs.tabw.tabBar().count() - 1, 0, -1):
+                if i not in index:
+                    tabs.append(objs.tabw.tabBar().tabText(i))
+                self.tabw.tabBar().removeTab(i)
 
-        # update the vulns widget
-        del vulns.database
-        vulns.tabw.deleteLater()
-        vulns.lst = copy(VULNS)
-        vulns.database = DBHandler.vulns()
-        vulns.tabs = {}
-        vulns.init_tab()
-        vulns.grid.replaceWidget(vulns.layout().itemAt(0).widget(), vulns.tabw)
+            if index:
+                for i in index:
+                    if i in tabs:
+                        tabs.remove(i)
 
-        # open the tabs previously saved
-        for doc_id in reversed(tabs):
-            vulns.tabs["All"].fields["edit-" + doc_id].animateClick()
-        vulns.tabw.setCurrentWidget(vulns.tabs["All"])
+        else:
+            saved_checked = {}
+            for name, obj_class in objs.fields.items():
+                name = name.split("-")
+                if len(name) > 1 and name[0] == "check":
+                    saved_checked[name[1]] = obj_class.checkState()
+        # rebuild the objs
+        if self.obj == "vulns" :
+            objs.tabw.deleteLater()
+            del objs.database
+            objs.database = DBHandler.vulns() # TODO adapt for each self.obj
+            objs.tabs = {}
+        objs.lst = copy(VULNS) if self.obj == "vulns" else copy(PEOPLE)
+        objs.init_tab()
+        if self.obj == "vulns" :
+            objs.grid.replaceWidget(objs.layout().itemAt(0).widget(), objs.tabw)
 
-        # set the saved status
-        for number, status in saved_status.items():
-            if "isVuln-"+number in vulns.tabs["All"].fields:
-                vulns.tabs["All"].fields["isVuln-"+number].setCurrentText(status)
+            # re-open the tabs edit (vulns only)
+            for doc_id in reversed(tabs):
+                objs.tabs["All"].fields["edit-" + doc_id].animateClick()
+            objs.tabw.setCurrentWidget(objs.tabs["All"])
+
+            # redo the status
+            for number, status in saved_status.items():
+                if "isVuln-" + number in objs.tabs["All"].fields:
+                    objs.tabs["All"].fields["isVuln-" + number].setCurrentText(status)
+        else: # redo the status
+            for number, checked in saved_checked.items():
+                if "check-" + number in objs.fields:
+                    objs.fields["check-" + number].setCheckState(checked)
 
     def toggle_hide(self):
         """Toggles self.hide."""
@@ -713,4 +778,4 @@ class VulnsGit(QWidget):
         """Reloads self.json_db_git after updating git."""
         self.git.refresh()
         self.json_db_git = json.loads(
-            open(DB_VULNS_GIT, 'r').read())["_default"]
+            open(DB_GIT_LOCAL_FILES[self.obj], 'r').read())["_default"]
