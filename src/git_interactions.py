@@ -12,7 +12,7 @@ import time
 from threading import Thread
 from shutil import copyfile
 from PyQt5.QtCore import QCoreApplication, QObject
-from conf.db import DB_VULNS, DB_VULNS_GIT, DB_VULNS_GIT_UPDATED, DB_VULNS_GIT_DIR, DB_VULNS_GIT_FILE
+from conf.db import DB_LOCAL_FILES, DB_GIT_LOCAL_FILES,  DB_GIT_DIR, DB_GIT_REMOTE_FILES
 from conf.report import SSH_KEY, GIT, REFRESH_RATE, COMMIT_MESSAGE
 
 
@@ -25,7 +25,7 @@ class Git(QObject):
         self.repo = None
         self.app = QCoreApplication.instance()
         self.setParent(self.app)
-        self.hidden_changes_vulns = set()
+        self.hidden_changes_objects = {"vulns":set(), "auditors":set(), "clients":set()}
         self.background_thread = Thread(
             target=self.timer_vulnerabilities, daemon=True)
         self.background_update = Thread(
@@ -35,7 +35,7 @@ class Git(QObject):
     def init_git(self):
         """Initialises the git repository in a new directory."""
         self.clean_git()
-        self.repo = Repo.init(DB_VULNS_GIT_DIR)
+        self.repo = Repo.init(DB_GIT_DIR)
         ssh_cmd = "ssh -i " + SSH_KEY + " -F /dev/null -o NumberOfPasswordPrompts=0 -o StrictHostKeyChecking=no"
         self.repo.git.update_environment(GIT_SSH_COMMAND=ssh_cmd) # set the config ?
         self.repo.create_remote('origin', url=GIT)
@@ -47,27 +47,42 @@ class Git(QObject):
             unlink(path)
 
         try:
-            rmtree(DB_VULNS_GIT_DIR, onerror=on_rm_error)
+            rmtree(DB_GIT_DIR, onerror=on_rm_error)
         except FileNotFoundError:
             pass
 
-    def vulnerabilities_changed(self):
+    def vulnerabilities_changed(self): #useless
         """
-        Compares DB_VULNS and DB_VULNS_GIT
+        Compares DB_LOCAL_FILES["vulns"] and DB_VULNS_GIT
         Return True if the vulnerabilities tracked changed
         """
         try:
             json_db = json.loads(
-                open(DB_VULNS, 'r').read())["_default"]
+                open(DB_LOCAL_FILES["vulns"], 'r').read())["_default"]
             json_db_git = json.loads(
-                open(DB_VULNS_GIT, 'r').read())["_default"]
+                open(DB_GIT_LOCAL_FILES["vulns"], 'r').read())["_default"]
         except FileNotFoundError:
             return True
         list_id = set(json_db.keys()).union(set((json_db_git.keys())))
         for ident in list_id:
-            if ident not in self.hidden_changes_vulns and (ident not in json_db or ident not in json_db_git or  json_db_git[ident] != json_db[ident]):
+            if ident not in self.hidden_changes_objects["vulns"] and (ident not in json_db or ident not in json_db_git or  json_db_git[ident] != json_db[ident]):
                 return True
         return False
+
+    def objects_changed(self, db_local_file, db_git_file, obj):
+        try:
+            json_db = json.loads(
+                open(db_local_file, 'r').read())["_default"]
+            json_db_git = json.loads(
+                open(db_git_file, 'r').read())["_default"]
+        except FileNotFoundError:
+            return True
+        list_id = set(json_db.keys()).union(set((json_db_git.keys())))
+        for ident in list_id:
+            if ident not in self.hidden_changes_objects[obj] and (ident not in json_db or ident not in json_db_git or  json_db_git[ident] != json_db[ident]):
+                return True
+        return False
+
 
     def git_update(self):
         """Pulls git repo and colors View changes button if the repository is unreachable. and return True if the repo has been updated."""
@@ -81,11 +96,14 @@ class Git(QObject):
             self.repo.remote().pull('master')
             self.git_reachable = True
 
-            if Git.git_changed():
-                copyfile(DB_VULNS_GIT_UPDATED, DB_VULNS_GIT)
+            objects_changed = Git.git_changed()
+            if diffs:
+                refresh_button = diffs.grid.itemAt(1).widget()
+                refresh_button.setStyleSheet("QPushButton { background-color : light gray }")
+            for ind_object in  objects_changed:
+                copyfile(DB_GIT_DIR + DB_GIT_REMOTE_FILES[ind_object] , DB_GIT_LOCAL_FILES[ind_object])
                 ret_value = True
                 if diffs and diffs.isVisible():
-                    refresh_button = diffs.layout().itemAt(0).widget().widget(0).widget.layout().itemAt(3).widget()
                     refresh_button.setStyleSheet("QPushButton { background-color : red }")
                     # TODO: add an automatic refresh of the diff window if changed
                     # diffs.refresh_tab_widget() --> cause an QObject::setParent: Cannot set parent, new parent is in a different thread
@@ -100,17 +118,18 @@ class Git(QObject):
 
     @staticmethod
     def git_changed():
-        """Compares DB_VULNS_GIT_UPDATED and DB_VULNS_GIT"""
-        try:
-            if DB_VULNS_GIT_UPDATED:
-                json_db_initial = json.loads(
-                    open(DB_VULNS_GIT, 'r').read())["_default"]
-                json_db_updated = json.loads(open(DB_VULNS_GIT_UPDATED, 'r').read())["_default"]
-                return json_db_updated != json_db_initial
-        except FileNotFoundError as err:
-            print(err)
-
-            return False
+        """Compares DB_VULNS_GIT_UPDATED and DB_GIT_LOCAL_FILES["vulns"]"""
+        objects_changed = []
+        for ind_objects in DB_GIT_REMOTE_FILES:
+            try:
+                if DB_GIT_DIR + DB_GIT_REMOTE_FILES[ind_objects]:
+                    json_db_initial = json.loads(
+                        open(DB_GIT_LOCAL_FILES[ind_objects], 'r').read())["_default"]
+                    json_db_updated = json.loads(open(DB_GIT_DIR + DB_GIT_REMOTE_FILES[ind_objects], 'r').read())["_default"]
+                    objects_changed = objects_changed + [ind_objects] if json_db_updated != json_db_initial else objects_changed
+            except FileNotFoundError as err:
+                print(err)
+        return objects_changed
 
     def timer_vulnerabilities(self):
         """Every REFRESH_RATE seconds, tries to update git."""
@@ -127,7 +146,13 @@ class Git(QObject):
         if self.git_reachable:
             git_connection.setStyleSheet("QPushButton { background-color : green }")
             view_change_button.setEnabled(True)
-            if self.vulnerabilities_changed(): # if the vulnerabilities  aren't hidden
+            if self.objects_changed(DB_LOCAL_FILES["vulns"], DB_GIT_LOCAL_FILES["vulns"], "vulns"): # if the vulnerabilities  aren't hidden
+                view_change_button.setStyleSheet(
+                    "QPushButton { background-color : orange }")
+            elif self.objects_changed(DB_LOCAL_FILES["auditors"], DB_GIT_LOCAL_FILES["auditors"], "auditors"): # if the auditors aren't hidden
+                view_change_button.setStyleSheet(
+                    "QPushButton { background-color : orange }")
+            elif self.objects_changed(DB_LOCAL_FILES["clients"], DB_GIT_LOCAL_FILES["clients"], "clients"): # if the clients  aren't hidden
                 view_change_button.setStyleSheet(
                     "QPushButton { background-color : orange }")
             else:
@@ -160,11 +185,11 @@ class Git(QObject):
         git_text.clicked.connect(self.refresh)
         self.background_thread.start()
 
-    def git_upload(self):
+    def git_upload(self, db_file):
         """
         Uploads to the repo the updated file (vulns)
         """
-        self.repo.index.add(DB_VULNS_GIT_FILE)
+        self.repo.index.add(db_file)
         self.repo.index.commit(COMMIT_MESSAGE)
         self.repo.remote().pull('master')
         try:

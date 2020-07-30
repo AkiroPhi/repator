@@ -19,9 +19,6 @@ VULNS_INITIAL["sub_categorySort"] = {"class": SortButton,
 VULNS_INITIAL["nameSort"] = {"class": SortButton,
                              "args": ["name", False],
                              "col": 4}
-VULNS_INITIAL["refresh"] = {"class": QPushButton,
-                            "arg": "Refresh",
-                            "col": 5}
 VULNS_INITIAL["id0"] = {"class": QLabel,
                         "arg": "ID",
                         "col": 0,

@@ -17,6 +17,7 @@ BLUE = '#4169e1'
 DEFAULT = '#000000'
 COLORS = [BLUE, GREEN, RED, DEFAULT]
 HEADERS = {"category", "sub_category", "name", "labelNeg", "labelPos", "script", "regexVuln", "regexNotVuln"}
+HEADERS_PEOPLE = {"full_name", "phone", "email", "role"}
 CVSS = {"AV", "AC", "PR", "UI", "S", "C", "I", "A"}
 HISTORIES = {"reco", "observPos", "observNeg", "risk"}
 

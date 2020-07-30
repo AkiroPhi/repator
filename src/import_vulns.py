@@ -5,7 +5,7 @@ from collections import OrderedDict
 from csv import DictReader
 from json import JSONDecoder,dumps
 from conf.report import LANGUAGES
-from conf.db import DB_VULNS,DB_VULNS_DEFAULT
+from conf.db import DB_LOCAL_FILES, DB_VULNS_DEFAULT
 from src.dbhandler import DBHandler
 from src.db_cleaner import clean_db
 
@@ -79,7 +79,7 @@ def main(args):
                     del row[field]
             res_dict[ident] = row
     jsondb = "{\"_default\":" + dumps(res_dict, ensure_ascii=False, sort_keys=True) + "}"
-    with open(DB_VULNS, 'w') as output:
+    with open(DB_LOCAL_FILES["vulns"], 'w') as output:
         output.write(jsondb)
 
     print("New database successfuly imported.")

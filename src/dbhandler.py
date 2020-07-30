@@ -7,9 +7,9 @@ import collections
 
 from tinydb import TinyDB, Query
 
-from conf.db import (DB_AUDITORS, DB_AUDITORS_DEFAULT, DB_CLIENTS,
-                     DB_CLIENTS_DEFAULT, DB_VULNS, DB_VULNS_DEFAULT,
-                     DB_VULNS_GIT, DB_VULNS_DIFFERENT_LANG)
+from conf.db import (DB_LOCAL_FILES, DB_AUDITORS_DEFAULT,
+                     DB_CLIENTS_DEFAULT, DB_VULNS_DEFAULT,
+                     DB_GIT_LOCAL_FILES, DB_VULNS_DIFFERENT_LANG)
 from conf.report import LANGUAGES
 
 
@@ -18,22 +18,32 @@ class DBHandler:
     @staticmethod
     def auditors():
         """Default constructor for Auditors database."""
-        return DBHandler(DB_AUDITORS, DB_AUDITORS_DEFAULT)
+        return DBHandler(DB_LOCAL_FILES["auditors"], DB_AUDITORS_DEFAULT)
 
     @staticmethod
     def clients():
         """Default constructor for Clients database."""
-        return DBHandler(DB_CLIENTS, DB_CLIENTS_DEFAULT)
+        return DBHandler(DB_LOCAL_FILES["clients"], DB_CLIENTS_DEFAULT)
 
     @staticmethod
     def vulns():
         """Default constructor for Vulns database."""
-        return DBHandler(DB_VULNS, DB_VULNS_DEFAULT)
+        return DBHandler(DB_LOCAL_FILES["vulns"], DB_VULNS_DEFAULT)
 
     @staticmethod
     def vulns_git():
         """Default constructor for Vulns taken from git database."""
-        return DBHandler(DB_VULNS_GIT, DB_VULNS_DEFAULT)
+        return DBHandler(DB_GIT_LOCAL_FILES["vulns"], DB_VULNS_DEFAULT)
+
+    @staticmethod
+    def auditors_git():
+        """Default constructor for Vulns taken from git database."""
+        return DBHandler(DB_GIT_LOCAL_FILES["auditors"], DB_AUDITORS_DEFAULT)
+
+    @staticmethod
+    def clients_git():
+        """Default constructor for Vulns taken from git database."""
+        return DBHandler(DB_GIT_LOCAL_FILES["clients"], DB_CLIENTS_DEFAULT)
 
     def __init__(self, db_path, default_values=None):
         if not path.exists(path.dirname(db_path)):
@@ -70,7 +80,7 @@ class DBHandler:
             dictionary = collections.OrderedDict(self.search_by_id(1))
             first_lang = True
 
-            if self.path == DB_VULNS:
+            if self.path == DB_LOCAL_FILES["vulns"]:
                 # Adds the keys which are different according to the languages
                 for lang in LANGUAGES:
                     if first_lang:
