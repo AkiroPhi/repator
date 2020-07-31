@@ -437,7 +437,6 @@ class Tab(QScrollArea):
         for ident, value in self.fields.items():
             if isinstance(value, SortButton):
                 value.update_values()
-        self.updateField.emit(None, False)
 
     def save(self, database=False):
         """Saves the values of lst into self.values and takes the values from the database to save them into self.values.
@@ -470,7 +469,6 @@ class Tab(QScrollArea):
 
         if database and self.database is not None:
             self.values["db"] = self.database.get_all()
-        self.updateField.emit(None, False)
         return self.values
 
     def edit_vuln(self):

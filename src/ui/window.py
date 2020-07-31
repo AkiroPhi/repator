@@ -4,7 +4,7 @@
 from collections import OrderedDict
 from copy import copy
 
-from PyQt5.QtWidgets import QWidget, QTabWidget, QPushButton, QGridLayout, QFileDialog, QLabel, QMessageBox, \
+from PyQt5.QtWidgets import QWidget, QTabWidget, QPushButton, QGridLayout, QFileDialog, QMessageBox, \
     QApplication
 from PyQt5.QtCore import QCoreApplication, Qt
 
@@ -87,6 +87,7 @@ class Window(QWidget):
             try:
                 with open(project_filename, 'r') as project_file:
                     self.load_json(project_file.read())
+                    self.set_modified(None, False)
             except (KeyError, TypeError, json.decoder.JSONDecodeError):
                 print("LoadFileError")
 
@@ -101,6 +102,7 @@ class Window(QWidget):
         if project_filename:
             with open(project_filename, 'w') as project_file:
                 project_file.write(json.dumps(values))
+                self.set_modified(None, False)
                 return True
         return False
 
@@ -135,6 +137,7 @@ class Window(QWidget):
 
         if output_filename:
             Generator.generate_all(values, output_filename)
+            self.set_modified(None, False)
 
     def view_changes(self):
         """Opens the window "Diffs"."""
